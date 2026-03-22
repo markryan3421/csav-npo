@@ -7,8 +7,8 @@ import React from 'react';
 import { CustomToast, toast } from '@/components/custom-toast';
 import PermissionController from '@/actions/App/Http/Controllers/PermissionController';
 import { CustomModalForm } from '@/components/custom-modal-form';
-import { PermissionModalFormConfig } from '@/actions/config/forms/permission-modal-form';
-import { PermissionsTableConfig } from '@/actions/config/tables/permission-table';
+import { PermissionModalFormConfig } from '@/config/forms/permission-modal-form';
+import { PermissionsTableConfig } from '@/config/tables/permission-table';
 import { CustomTable } from '@/components/custom-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
