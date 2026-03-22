@@ -30,6 +30,7 @@ class SdgService
             'cover_photo' => $coverPhotoPath ?? 'default-cover.jpg',
         ]);
 
+        $sdg->save();
         // Attach the authenticated user
         $sdg->users()->attach($userId, [
             'created_at' => now(),

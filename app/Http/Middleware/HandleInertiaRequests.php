@@ -35,6 +35,18 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $currentSdg = null;
+
+        if ($user = $request->user()) {
+            // Option 1: from the user's current_sdg_id (cached in model)
+            $currentSdg = $user->currentSdg;
+
+            // Option 2: from the session
+            // if ($sdgId = session('sdg_id')) {
+            //     $currentSdg = Sdg::find($sdgId);
+            // }
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -42,6 +54,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'currentSdg' => $currentSdg ? [
+                'id'   => $currentSdg->id,
+                'name' => $currentSdg->name,
+                'slug' => $currentSdg->slug,
+            ] : null,
         ];
     }
 }

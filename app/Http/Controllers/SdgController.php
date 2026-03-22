@@ -5,24 +5,37 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SdgRequest;
 use App\Models\Sdg;
 use App\Services\SdgService;
-use Illuminate\Http\Request;
-use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class SdgController extends Controller
 {
+    // Service for creating and updating SDGs
     public function __construct(
         protected SdgService $sdgService
     ) {}
+
+    public function changeSdg(Sdg $sdg)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Persist the selected SDG on the user — index() reads this
+        $user->update(['current_sdg_id' => $sdg->id]);
+        session(['sdg_id' => $sdg->id]);
+
+        // ✅ Simple redirect — index() will read current_sdg_id
+        return redirect()->route('goals.index')
+            ->with('success', 'SDG changed successfully.');
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $sdgs = Sdg::all();
+        /** @var \App\Models\User $user */
+        $sdgs = Auth::user()->sdgs;
         return Inertia::render('dashboard', compact('sdgs'));
     }
 

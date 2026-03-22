@@ -12,8 +12,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use App\Models\Sdg;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'current_sdg_id', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -38,5 +39,16 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Sdg::class, 'sdg_user', 'user_id', 'sdg_id')
             ->withTimestamps();
+    }
+
+    public function goals(): BelongsToMany
+    {
+        return $this->belongsToMany(Goal::class, 'goal_user', 'user_id', 'goal_id')
+            ->withTimestamps();
+    }
+
+    public function currentSdg(): BelongsTo
+    {
+        return $this->belongsTo(Sdg::class, 'current_sdg_id');
     }
 }
