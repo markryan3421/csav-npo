@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History } from 'lucide-react';
+import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -38,6 +38,11 @@ const ExpendituresItems: NavItem[] = [
         title: 'Permissions',
         href: '/permissions',
         icon: Lock,
+    },
+    {
+        title: 'Roles',
+        href: '/roles',
+        icon: Shield,
     },
 ];
 

@@ -1,6 +1,7 @@
 import { Link } from "@inertiajs/react";
 import * as LucidIcons from "lucide-react";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface TableColumn {
@@ -9,6 +10,7 @@ interface TableColumn {
     isImage?: boolean;
     isAction?: boolean;
     className?: string;
+    type?: string;
 }
 
 interface ActionConfig {
@@ -217,6 +219,14 @@ export const CustomTable = ({
                                                             year: 'numeric',
                                                         })}
                                                     </span>
+                                                ) : col.type === 'multi-values' && Array.isArray(row[col.key]) ? (
+                                                    <div className="flex flex-wrap justify-center items-center gap-1">
+                                                        {row[col.key].map((permission: any) => (
+                                                            <Badge key={permission.id} variant='outline' className="bg-primary text-white p-2">
+                                                                {permission.label || permission.name}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
                                                 ) : (
                                                     /* Default text cell */
                                                     <span className="text-sm text-foreground">

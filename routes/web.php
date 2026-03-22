@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SdgController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -18,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/change-sdg/{sdg:slug}', [SdgController::class, 'changeSdg'])->name('sdg.changeSdg');
     Route::resource('goals', GoalController::class);
     Route::resource('permissions', PermissionController::class);
+    Route::resource('roles', RoleController::class);
 });
 
 require __DIR__ . '/settings.php';
