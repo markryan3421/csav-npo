@@ -34,6 +34,11 @@ const ExpendituresItems: NavItem[] = [
         href: GoalController.index().url,
         icon: Landmark,
     },
+    {
+        title: 'Permissions',
+        href: '/permissions',
+        icon: Lock,
+    },
 ];
 
 // const AccessControlItems: NavItem[] = [
