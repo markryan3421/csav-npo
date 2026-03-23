@@ -44,6 +44,11 @@ const ExpendituresItems: NavItem[] = [
         href: '/roles',
         icon: Shield,
     },
+    {
+        title: 'Users',
+        href: '/users',
+        icon: Users,
+    },
 ];
 
 // const AccessControlItems: NavItem[] = [

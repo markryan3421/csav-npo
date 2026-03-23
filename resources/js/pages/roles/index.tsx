@@ -27,6 +27,12 @@ interface Role {
     description: string;
 }
 
+interface Permission {
+    name: string;
+    label: string;
+    module: string;
+}
+
 // Define the LinkProps interface for pagination links
 interface LinkProps {
     // From 'links' array
@@ -65,18 +71,15 @@ interface IndexProps {
     filters: FilterProps;
     totalCount: number;
     filteredCount: number;
+    permissions: Record<string, Permission[]>;
 }
 
-export default function Index({ roles }: IndexProps) {
-    // Get the route function from ziggy-js to generate URLs
+export default function Index({ roles, permissions }: IndexProps) {
 
     // This will display flash message from the backend (success/error)
-    // const { flash } = usePage<{ flash?: { success?: string; error?: string } }>().props;
-    // const flashMessage = flash?.success || flash?.error;
     const [modalOpen, setModalOpen] = React.useState(false);
     const [mode, setMode] = React.useState<'create' | 'view' | 'edit'>('create');
     const [selectedCategory, setSelectedCategory] = React.useState<any>(null);
-    const { permissions } = usePage().props;
     // console.log(permissions);
 
     const { data, setData, errors, processing, reset, post, put } = useForm<{

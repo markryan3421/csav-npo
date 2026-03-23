@@ -17,7 +17,6 @@ class RoleController extends Controller
     public function index()
     {
         $roles = Role::with('permissions')->latest()->paginate(5);
-        // dd($roles);
         $permissions = Permission::get()->groupBy('module');
         return Inertia::render('roles/index', compact('roles', 'permissions'));
     }
