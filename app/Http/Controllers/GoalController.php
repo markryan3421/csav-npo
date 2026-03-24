@@ -27,15 +27,15 @@ class GoalController extends Controller
         $user = Auth::user();
 
         // current_sdg_id is updated by changeSdg() — this is now the source of truth
-        $sdg = $user->currentSdg; // uses the relationship on User model
+        $currentSdg = $user->currentSdg; // uses the relationship on User model
 
-        if (!$sdg) {
+        if (!$currentSdg) {
             // User hasn't selected an SDG yet — send them to the dashboard
             return redirect()->route('dashboard');
         }
 
         $goals = Goal::withoutGlobalScope('sdg')
-            ->where('sdg_id', $sdg->id)
+            ->where('sdg_id', $currentSdg->id)
             ->where(function ($q) use ($user) {
                 $q->where('project_manager_id', $user->id)
                     ->orWhereHas('assignedUsers', fn($q) => $q->where('users.id', $user->id));
@@ -43,16 +43,18 @@ class GoalController extends Controller
             ->with(['assignedUsers:id,name,email', 'projectManager:id,name'])
             ->get();
 
-        $totalGoals        = Goal::withoutGlobalScope('sdg')->where('sdg_id', $sdg->id)->count();
-        $compliantGoals    = Goal::withoutGlobalScope('sdg')->where('sdg_id', $sdg->id)->where('compliance_percentage', 100)->count();
-        $nonCompliantGoals = Goal::withoutGlobalScope('sdg')->where('sdg_id', $sdg->id)->where('compliance_percentage', '<', 100)->count();
+        $totalGoals        = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->count();
+        $compliantGoals    = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->where('compliance_percentage', 100)->count();
+        $nonCompliantGoals = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->where('compliance_percentage', '<', 100)->count();
+        $assignedGoalsCount = $user->goals->count();
 
         return Inertia::render('goals/index', [
-            'selectedSdg'       => $sdg,
+            'selectedSdg'       => $currentSdg,
             'goals'             => $goals,
             'totalGoals'        => $totalGoals,
             'compliantGoals'    => $compliantGoals,
             'nonCompliantGoals' => $nonCompliantGoals,
+            'assignedGoalsCount' => $assignedGoalsCount,
         ]);
     }
     /**

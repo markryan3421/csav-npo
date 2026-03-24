@@ -159,8 +159,7 @@ export default function EditGoal({ sdg, goal, assignedUserIds, staffUsers, authU
                         </div>
 
                         <Link
-                            as="button"
-                            href={`/${sdg.slug}/goals`}
+                            href={GoalController.index().url}
                             className="inline-flex items-center gap-2 rounded-xl border-2 border-primary px-4 py-2 text-sm font-semibold text-primary transition-all duration-200
                                        active:scale-95 hover:bg-primary hover:text-primary-foreground hover:shadow-md
                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"

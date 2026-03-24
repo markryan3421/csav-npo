@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { CustomToast, toast } from '@/components/custom-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontalIcon, Pencil, Trash2, Target, Plus } from 'lucide-react';
+import { MoreHorizontalIcon, Pencil, Trash2, Target, Plus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GoalController from '@/actions/App/Http/Controllers/GoalController';
 import SdgController from '@/actions/App/Http/Controllers/SdgController';
@@ -36,6 +36,7 @@ interface IndexProps {
     compliantGoals: number;
     nonCompliantGoals: number;
     sdgs: Sdg[];
+    assignedGoalsCount: number;
 }
 
 interface FlashProps extends Record<string, any> {
@@ -65,7 +66,7 @@ function TypeBadge({ type }: { type: string }) {
     );
 }
 
-export default function Index({ selectedSdg, goals, totalGoals, compliantGoals, nonCompliantGoals, sdgs }: IndexProps) {
+export default function Index({ selectedSdg, goals, totalGoals, compliantGoals, nonCompliantGoals, sdgs, assignedGoalsCount }: IndexProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: selectedSdg?.name ?? 'Goals', href: `/sdg` },
     ];
@@ -128,6 +129,17 @@ export default function Index({ selectedSdg, goals, totalGoals, compliantGoals, 
                                 Total Goals
                             </p>
                             <p className="text-4xl font-extrabold text-primary-foreground">{totalGoals}</p>
+                        </div>
+
+                        {/* Assigned Goals Card */}
+                        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                Assigned to You
+                            </p>
+                            <p className="mt-1 text-3xl font-extrabold text-foreground">{assignedGoalsCount}</p>
+                            {/* <p className="mt-1 text-xs text-muted-foreground">
+                                {completionPercentage}% of total
+                            </p> */}
                         </div>
 
                         {/* Compliant — 30% secondary */}
@@ -220,6 +232,16 @@ export default function Index({ selectedSdg, goals, totalGoals, compliantGoals, 
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-40">
+                                                        {/* View — primary */}
+                                                        <DropdownMenuItem asChild>
+                                                            <Link
+                                                                href={GoalController.show({ goal: goal.slug }).url}
+                                                                className="flex items-center gap-2 text-sm"
+                                                            >
+                                                                <Eye className="h-3.5 w-3.5 text-primary" />
+                                                                View
+                                                            </Link>
+                                                        </DropdownMenuItem>
                                                         {/* Edit — primary */}
                                                         <DropdownMenuItem asChild>
                                                             <Link
