@@ -21,7 +21,23 @@ class UserController extends Controller
      */
     public function index()
     {
-        $staffUsers = User::with('roles')->get();
+        $user = Auth::user();
+        $staffUsers = User::with('roles')
+            ->where('current_sdg_id', $user->current_sdg_id)
+            ->where('id', '!=', $user->id)
+            ->role(['staff', 'project-manager', 'admin'])
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id'        => $user->id,
+                    'user_slug' => $user->user_slug,
+                    'name'      => $user->name,
+                    'email'     => $user->email,
+                    'avatar'    => $user->avatar,
+                    'is_online' => $user->is_online,
+                    'roles'     => $user->roles->map(fn($role) => ['name' => $role->name])->toArray(),
+                ];
+            });
 
         return Inertia::render('users/index', compact('staffUsers'));
     }
@@ -43,8 +59,10 @@ class UserController extends Controller
     {
         $user = User::create([
             'name'     => $request->name,
+            'user_slug' => Str::slug($request->name),
             'email'    => $request->email,
             'password' => Hash::make($request->password),
+            'current_sdg_id' => Auth::user()->current_sdg_id,
         ]);
 
         if ($request->hasFile('avatar')) {
@@ -112,6 +130,7 @@ class UserController extends Controller
     {
         $data = [
             'name' => $request->name,
+            'slug' => Str::slug($request->name),
             'email' => $request->email,
         ];
 

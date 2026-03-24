@@ -15,7 +15,7 @@ use App\Models\Sdg;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'current_sdg_id', 'avatar'])]
+#[Fillable(['name', 'user_slug', 'email', 'password', 'current_sdg_id', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
