@@ -96,6 +96,27 @@ class GoalController extends Controller
             ->with('success', 'Goal created successfully.');
     }
 
+    public function show(Goal $goal)
+    {
+        $user = Auth::user();
+        $userRole = $user->getRoleNames()->first() ?? 'staff';
+
+        $goal->load([
+            'projectManager:id,name,avatar',
+            'assignedUsers:id,name,email,avatar',
+            'sdg:id,name',
+            'tasks.taskProductivities.user',
+            'tasks.taskProductivities.taskProductivityFiles',
+        ]);
+        // dd($goal->toArray());
+
+        return Inertia::render('goals/show', [
+            'goal'         => $goal,
+            'authUserRole' => $userRole,
+            'authUserId'   => $user->id,
+        ]);
+    }
+
     /**
      * GET /{sdg}/goals/{goal}/edit
      */

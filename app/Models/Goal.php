@@ -74,4 +74,9 @@ class Goal extends Model
         return $this->belongsToMany(User::class, 'goal_user', 'goal_id', 'user_id')
             ->withTimestamps();
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
 }
