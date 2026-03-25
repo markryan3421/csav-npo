@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import {
     ArrowLeft, Target, Flag, Users, CalendarDays, TrendingUp,
@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
+import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface TaskProductivityFile {
@@ -33,7 +34,7 @@ interface TaskProductivity {
     remarks?: string | null;
     created_at: string;
     user: { id: number; name: string; avatar?: string | null; };
-    taskProductivityFiles: TaskProductivityFile[];
+    task_productivity_files: TaskProductivityFile[];
 }
 
 interface Task {
@@ -44,7 +45,7 @@ interface Task {
     deadline: string | null;
     status: string;
     created_at: string;
-    taskProductivities?: TaskProductivity[];
+    task_productivities?: TaskProductivity[];
 }
 
 interface Goal {
@@ -67,6 +68,10 @@ interface ShowProps {
     goal: Goal;
     authUserRole: string;
     authUserId: number;
+}
+
+interface FormData {
+    status: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -175,12 +180,21 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
     const [extendOpen, setExtendOpen] = useState(false);
     const [newDeadline, setNewDeadline] = useState('');
     const dl = deadlineInfo(task.deadline);
-    const submissions = task.taskProductivities ?? [];
+
+    const submissions = task.task_productivities ?? [];
     const submissionCount = submissions.length;
+
+    console.log(submissions);
 
     const handleApproveResubmission = () => {
         router.put(`/tasks/${task.slug}/approve-resubmission`, { deadline: newDeadline }, {
             onSuccess: () => setExtendOpen(false),
+        });
+    };
+
+    const handleApproveSubmission = (submissionId: number) => {
+        router.put(TaskProductivityController.approveSubmission(submissionId).url, {
+            preserveScroll: true,
         });
     };
 
@@ -367,7 +381,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                             <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Submissions</p>
                             <p className="text-3xl font-extrabold text-foreground">{submissionCount}</p>
                             {submissionCount > 0 && (() => {
-                                const approved = task.taskProductivities.filter((s) => s.status === 'approved').length;
+                                const approved = submissions.filter((s) => s.status === 'approved').length;
                                 const rate = Math.round((approved / submissionCount) * 100);
                                 return (
                                     <div className="mt-1">
@@ -399,26 +413,27 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                                 </p>
 
                                                 {/* Files */}
-                                                {sub.taskProductivityFiles?.length > 0 && (
-                                                    <div className="mt-3 space-y-1.5">
-                                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                                            Files
-                                                        </p>
-                                                        {sub.taskProductivityFiles.map((file) => (
-                                                            <div key={file.id} className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                                                                <div className="flex min-w-0 items-center gap-2">
-                                                                    <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                                                    <span className="truncate text-xs text-foreground">{file.file_name}</span>
+                                                {sub.task_productivity_files?.length > 0 && (
+                                                    <div className="mt-3">
+                                                        <p className="text-xs font-medium text-muted-foreground">Submitted Files</p>
+                                                        <div className="mt-2 space-y-2">
+                                                            {sub.task_productivity_files.map((file) => (
+                                                                <div key={file.id} className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FileText className="h-4 w-4 text-muted-foreground" />
+                                                                        <span className="text-sm text-foreground">{file.file_name}</span>
+                                                                    </div>
+                                                                    <a
+                                                                        href={`/storage/${file.file_path}`}
+                                                                        target="_self"
+                                                                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                                                    >
+                                                                        <ExternalLink className="h-3 w-3" />
+                                                                        Open
+                                                                    </a>
                                                                 </div>
-                                                                <a
-                                                                    href={`/storage/${file.file_path}`}
-                                                                    target="_self"
-                                                                    className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 px-2 py-1 text-[10px] font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground"
-                                                                >
-                                                                    <ExternalLink className="h-3 w-3" /> Open
-                                                                </a>
-                                                            </div>
-                                                        ))}
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -446,7 +461,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                                 ) : (
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => router.post(`/submissions/${sub.id}/approve`)}
+                                                            onClick={() => handleApproveSubmission(sub.id)}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95"
                                                         >
                                                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve

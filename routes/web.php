@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\TaskProductivityController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SdgController;
@@ -27,6 +28,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('goals/{goal:slug}')->group(function () {
         Route::resource('tasks', TaskController::class);
     });
+
+    Route::get('tasks/{task:slug}/submit', [TaskProductivityController::class, 'submit'])->name('tasks.submit');
+    Route::post('tasks/{task:slug}/submit', [TaskProductivityController::class, 'storeSubmission'])->name('tasks.submit.store');
+    Route::put('submissions/{submission}/approve', [TaskProductivityController::class, 'approveSubmission'])->name('submissions.approve');
 });
 
 require __DIR__ . '/settings.php';
