@@ -159,7 +159,6 @@ export default function Reject({ submission }: RejectProps) {
                                 disabled={processing}
                                 className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl text-white transition-all duration-200 font-medium flex items-center justify-center shadow-lg hover:shadow-red-500/25 order-1 sm:order-2"
                             >
-                                <XCircle className="h-5 w-5 mr-2" />
                                 {processing
                                     ? <><Loader2 className="h-4 w-4 animate-spin" />Processing...</>
                                     : 'Reject Submission'}

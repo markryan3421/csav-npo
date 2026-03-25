@@ -480,7 +480,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                         {/* Staff: resubmit button */}
                                         {sub.status === 'rejected' && (
                                             <Link
-                                                href='#'
+                                                href={TaskProductivityController.resubmitForm({ task: task.slug, task_productivity: sub.id }).url}
                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-110 active:scale-95"
                                             >
                                                 <RotateCcw className="h-3.5 w-3.5" /> Resubmit

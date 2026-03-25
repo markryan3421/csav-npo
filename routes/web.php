@@ -42,9 +42,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('submissions/{submission:id}/reject', [TaskProductivityController::class, 'rejectSubmissionForm'])->name('submissions.reject.form');
     Route::post('submissions/{submission:id}/reject', [TaskProductivityController::class, 'reject'])->name('submissions.reject.store');
 
-    // // Resubmit Routes
-    // Route::get('tasks/{task:slug}/submissions/{submission:id}/resubmit-form', [TaskProductivityController::class, 'resubmitForm'])->name('tasks.submissions.resubmit.form');
-    // Route::put('tasks/{task:slug}/submissions/{submission:id}/resubmit', [TaskProductivityController::class, 'resubmit'])->name('tasks.submissions.resubmit.store');
+    // Resubmit Routes
+    Route::get('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit-form', [TaskProductivityController::class, 'resubmitForm'])->name('tasks.submissions.resubmit.form');
+    Route::put('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit', [TaskProductivityController::class, 'resubmit'])->name('tasks.submissions.resubmit.store');
 });
 
 require __DIR__ . '/settings.php';
