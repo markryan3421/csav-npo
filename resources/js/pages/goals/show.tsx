@@ -467,7 +467,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                                                         </button>
                                                         <Link
-                                                            href={`/submissions/${sub.id}/reject-form`}
+                                                            href={TaskProductivityController.rejectSubmissionForm(sub.id).url}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent transition-all hover:bg-accent hover:text-accent-foreground active:scale-95"
                                                         >
                                                             <XCircle className="h-3.5 w-3.5" /> Reject
@@ -478,9 +478,9 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                         )}
 
                                         {/* Staff: resubmit button */}
-                                        {!isAdminOrManager && sub.status === 'rejected' && (
+                                        {sub.status === 'rejected' && (
                                             <Link
-                                                href={`/submissions/${sub.id}/resubmit-form`}
+                                                href={TaskProductivityController.resubmitForm({ task: task.slug, taskProductivity: sub.id }).url}
                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-110 active:scale-95"
                                             >
                                                 <RotateCcw className="h-3.5 w-3.5" /> Resubmit
@@ -659,7 +659,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
                         {/* SDG */}
-                        <Section icon={Target} title="SDG" index={2}>
+                        <Section icon={Target} title="SDG">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-black text-primary-foreground">
                                     {goal.sdg?.id ?? '?'}
