@@ -94,7 +94,7 @@ class TaskProductivityController extends Controller
     }
 
     // Reject form
-    public function rejectForm(TaskProductivity $submission)
+    public function rejectSubmissionForm(TaskProductivity $submission)
     {
         $submission = TaskProductivity::with(['task.goal', 'user', 'taskProductivityFiles'])
             ->findOrFail($submission->id);

@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
+import TaskController from '@/actions/App/Http/Controllers/TaskController';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface TaskProductivityFile {
@@ -480,7 +480,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                         {/* Staff: resubmit button */}
                                         {sub.status === 'rejected' && (
                                             <Link
-                                                href={TaskProductivityController.resubmitForm({ task: task.slug, taskProductivity: sub.id }).url}
+                                                href='#'
                                                 className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-110 active:scale-95"
                                             >
                                                 <RotateCcw className="h-3.5 w-3.5" /> Resubmit

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { CustomTextarea } from '@/components/ui/custom-textarea';
 import InputError from '@/components/input-error';
-import { AlertCircle, XCircle } from 'lucide-react';
+import { AlertCircle, Loader2, XCircle } from 'lucide-react';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -160,30 +160,12 @@ export default function Reject({ submission }: RejectProps) {
                                 className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-xl text-white transition-all duration-200 font-medium flex items-center justify-center shadow-lg hover:shadow-red-500/25 order-1 sm:order-2"
                             >
                                 <XCircle className="h-5 w-5 mr-2" />
-                                {processing ? 'Rejecting...' : 'Reject Submission'}
+                                {processing
+                                    ? <><Loader2 className="h-4 w-4 animate-spin" />Processing...</>
+                                    : 'Reject Submission'}
                             </Button>
                         </div>
                     </form>
-                </div>
-
-                {/* Help Section */}
-                <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-5">
-                    <div className="flex items-start">
-                        <div className="flex-shrink-0 mt-1">
-                            <AlertCircle className="h-6 w-6 text-blue-500" />
-                        </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                Writing effective rejection feedback
-                            </h3>
-                            <div className="mt-2 text-sm text-blue-700 dark:text-blue-400 space-y-1">
-                                <p>• Be specific about what needs improvement</p>
-                                <p>• Provide actionable suggestions</p>
-                                <p>• Maintain a professional and constructive tone</p>
-                                <p>• Reference specific requirements or criteria</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </AppLayout>
