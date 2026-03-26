@@ -207,4 +207,123 @@ class TaskProductivityController extends Controller
         // Redirect back to the goal page or to the task detail
         return redirect("/goals/$goal->slug")->with('success', 'Task resubmitted successfully.');
     }
+
+    // Request resubmission
+    public function requestResubmission(Task $task)
+    {
+        $task->update([
+            'status' => 'resubmission_requested',
+            'remarks' => "Requested resubmission by: " . Auth::user()->name,
+        ]);
+
+        $task->save();
+
+        // $this->updateGoalProgress($submission->task->goal);
+
+        return redirect()->back()->with('success', 'Task resubmission requested successfully.');
+    }
+
+    // Approve resubmission
+    public function approveResubmission(Request $request, Task $task)
+    {
+        $request->validate([
+            'deadline' => 'required|date|after_or_equal:today',
+        ]);
+
+        $task->update([
+            'deadline' => $request->deadline,
+            'status' => 'approved_resubmission',
+            'remarks' => "Approved resubmission by: " . Auth::user()->name,
+        ]);
+
+        $task->save();
+
+        // $this->updateGoalProgress($submission->task->goal);
+
+        return redirect()->back()->with('success', 'Task resubmission approved successfully.');
+    }
+
+    public function rejectResubmission(Task $task)
+    {
+        $task->update([
+            'status' => 'rejected_resubmission',
+            'remarks' => "Rejected resubmission by: " . Auth::user()->name,
+        ]);
+
+        $task->save();
+
+        return redirect()->back()->with('success', 'Task resubmission rejected successfully.');
+    }
+
+    public function lateResubmitForm(Task $task)
+    {
+        return Inertia::render('productivities/late-resubmit', [
+            'task' => $task,
+        ]);
+    }
+
+    public function storeLateResubmit(Request $request, Task $task)
+    {
+        $goal = $task->goal;
+
+        // (1) For the task itself
+        $incomingFields = $request->validate([
+            'subject' => 'required|string|max:255',
+            'comments' => 'nullable|string',
+            'files' => 'required',
+            'files.*' => 'file|mimes:doc,docx,pdf,xls,xlsx,ppt,pptx|max:20480',
+        ]);
+
+        // (2) For the files being submitted
+        $taskProductivity = TaskProductivity::updateOrCreate(
+            [
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'updated_at' => now()->toDateString(),
+            ],
+            [
+                'sdg_id' => $task->sdg_id,
+                'goal_id' => $task->goal_id,
+                'subject' => $incomingFields['subject'],
+                'comments' => $incomingFields['comments'],
+                'status' => 'pending',
+                'remarks' => 'Pending for review',
+                'date' => now()->toDateString(),
+            ]
+        );
+
+        foreach ($incomingFields['files'] as $file) {
+            $filePath = $file->store('task_productivities', 'public');
+
+            $taskProductivity->taskProductivityFiles()->updateOrCreate([
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'file_type' => $file->getClientMimeType(),
+                'file_path' => $filePath,
+            ]);
+        }
+
+        // Update goal progress
+        // $this->updateGoalProgress($productivity->task->goal);
+
+        // // Notify project manager
+        // $goal->load('projectManager');
+        // $sender = Auth::user();
+
+        // if ($goal->projectManager) {
+        //     $action = $task->wasRecentlyCreated ? 'submitted' : 'resubmitted';
+
+        //     $goal->projectManager->notify(new TaskStatusNotification(
+        //         "{$sender->name} {$action} a task for {$goal->title}.",
+        //         "Go check it out.",
+        //         route('goals.show', ['goal' => $goal->slug]),
+        //         $goal->id,
+        //         $sender,
+        //         $goal
+        //     ));
+        // }
+
+        // Redirect back to the goal page or to the task detail
+        return redirect("/goals/$goal->slug")->with('success', 'Task resubmitted successfully.');
+    }
 }

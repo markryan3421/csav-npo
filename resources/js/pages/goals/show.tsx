@@ -199,11 +199,11 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
     };
 
     const handleRejectResubmission = () => {
-        router.post(`/tasks/${task.slug}/reject-resubmission`);
+        router.put(`/tasks/${task.slug}/reject-resubmission`);
     };
 
     const handleRequestResubmission = () => {
-        router.post(`/request-resubmission/${task.slug}`);
+        router.put(TaskProductivityController.requestResubmission({ task: task.slug }).url);
     };
 
     const handleDeleteTask = () => {
@@ -295,7 +295,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
 
                     {task.status === 'approved_resubmission' && (
                         <Link
-                            href={`/tasks/${task.slug}/resubmit`}
+                            href={`/tasks/${task.slug}/late-resubmit`}
                             className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95"
                         >
                             Submit Now

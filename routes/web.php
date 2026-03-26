@@ -45,6 +45,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Resubmit Routes
     Route::get('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit-form', [TaskProductivityController::class, 'resubmitForm'])->name('tasks.submissions.resubmit.form');
     Route::put('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit', [TaskProductivityController::class, 'resubmit'])->name('tasks.submissions.resubmit.store');
+
+    // Request Resubmission Routes
+    Route::put('tasks/{task:slug}/request-resubmission', [TaskProductivityController::class, 'requestResubmission'])->name('tasks.request-resubmission');
+    Route::put('tasks/{task:slug}/approve-resubmission', [TaskProductivityController::class, 'approveResubmission'])->name('tasks.approve-resubmission');
+    Route::put('tasks/{task:slug}/reject-resubmission', [TaskProductivityController::class, 'rejectResubmission'])->name('tasks.reject-resubmission');
+
+    // Late Submit Routes
+    Route::get('tasks/{task:slug}/late-resubmit', [TaskProductivityController::class, 'lateResubmitForm'])->name('tasks.late-resubmit.form');
+    Route::put('tasks/{task:slug}/late-resubmit', [TaskProductivityController::class, 'storeLateResubmit'])->name('tasks.late-resubmit.store');
 });
 
 require __DIR__ . '/settings.php';
