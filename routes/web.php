@@ -43,7 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('submissions/{submission:id}/reject', [TaskProductivityController::class, 'reject'])->name('submissions.reject.store');
 
     // Resubmit Routes
-    Route::get('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit-form', [TaskProductivityController::class, 'resubmitForm'])->name('tasks.submissions.resubmit.form');
+    Route::get('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit-form', [TaskProductivityController::class, 'showResubmitForm'])->name('tasks.submissions.resubmit.form');
     Route::put('tasks/{task:slug}/submissions/{task_productivity:id}/resubmit', [TaskProductivityController::class, 'resubmit'])->name('tasks.submissions.resubmit.store');
 
     // Request Resubmission Routes

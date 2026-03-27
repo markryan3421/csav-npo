@@ -123,7 +123,7 @@ class TaskProductivityController extends Controller
     }
 
     // Resubmit form (rejected)
-    public function resubmitForm(Task $task, $id)
+    public function showResubmitForm(Task $task, $id)
     {
         $productivity = TaskProductivity::with('taskProductivityFiles', 'user')
             ->findOrFail($id);
