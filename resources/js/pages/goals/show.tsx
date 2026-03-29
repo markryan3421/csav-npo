@@ -48,6 +48,13 @@ interface Task {
     task_productivities?: TaskProductivity[];
 }
 
+interface Sdg {
+    id: number;
+    name: string;
+    slug?: string;
+    description?: string;
+}
+
 interface Goal {
     id: number;
     slug: string;
@@ -58,8 +65,9 @@ interface Goal {
     start_date: string;
     end_date: string;
     compliance_percentage: number;
-    sdg: { id: number; name: string; };
-    projectManager: { id: number; name: string; avatar?: string | null; } | null;
+    goal_with_sdgs: Sdg[];
+    sdg_id: number;
+    project_manager: { id: number; name: string; avatar?: string | null; } | null;
     assigned_users: { id: number; name: string; email: string; avatar?: string | null; }[];
     tasks: Task[];
 }
@@ -68,10 +76,6 @@ interface ShowProps {
     goal: Goal;
     authUserRole: string;
     authUserId: number;
-}
-
-interface FormData {
-    status: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -183,8 +187,6 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
 
     const submissions = task.task_productivities ?? [];
     const submissionCount = submissions.length;
-
-    console.log(submissions);
 
     const handleApproveResubmission = () => {
         router.put(`/tasks/${task.slug}/approve-resubmission`, { deadline: newDeadline }, {
@@ -570,6 +572,7 @@ function normStatus(s: string) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) {
+    console.log(goal);
     const roleValue = Array.isArray(authUserRole)
         ? (authUserRole[0] ?? 'staff')
         : authUserRole;
@@ -578,12 +581,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
 
     const tasks = goal.tasks ?? [];
     const assignedUsers = goal.assigned_users ?? [];
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Goals', href: '/goals' },
-        { title: goal.title, href: `/goals/${goal.slug}` },
-    ];
-
+    
     const filteredTasks = useMemo(() =>
         taskFilter === 'all'
             ? tasks
@@ -594,7 +592,10 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
     const progressPct = Math.min(100, Math.max(0, goal.compliance_percentage ?? 0));
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={[
+            { title: 'Goals', href: '/goals' },
+            { title: goal.title, href: `/goals/${goal.slug}` },
+        ]}>
             <Head title={goal.title} />
 
             <style>{`
@@ -628,10 +629,16 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                                 <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs font-black uppercase tracking-wider text-muted-foreground">
                                     {goal.type} Term
                                 </span>
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">
-                                    <Target className="h-3 w-3" />
-                                    SDG {goal.sdg?.id}
-                                </span>
+                                {/* Show all associated SDGs */}
+                                {goal.goal_with_sdgs?.map((sdg) => (
+                                    <span
+                                        key={sdg.id}
+                                        className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground"
+                                    >
+                                        <Target className="h-3 w-3" />
+                                        {sdg.name}
+                                    </span>
+                                ))}
                             </div>
                             <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
                                 {goal.title}
@@ -658,22 +665,42 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                     {/* ── Detail grid ── */}
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
-                        {/* SDG */}
-                        <Section icon={Target} title="SDG">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-black text-primary-foreground">
-                                    {goal.sdg?.id ?? '?'}
-                                </div>
-                                <span className="text-sm font-semibold text-foreground">{goal.sdg?.name ?? 'Not assigned'}</span>
+                        {/* SDGs Section */}
+                        <Section icon={Target} title="Associated SDGs">
+                            <div className="space-y-2">
+                                {goal.goal_with_sdgs?.length > 0 ? (
+                                    goal.goal_with_sdgs.map((sdg) => (
+                                        <div key={sdg.id} className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-black text-primary-foreground">
+                                                {sdg.id}
+                                            </div>
+                                            <div>
+                                                <span className="text-sm font-semibold text-foreground">{sdg.name}</span>
+                                                {sdg.description && (
+                                                    <p className="text-xs text-muted-foreground">{sdg.description}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-black text-primary-foreground">
+                                            {goal.sdg_id}
+                                        </div>
+                                        <span className="text-sm font-semibold text-foreground">
+                                            SDG {goal.sdg_id}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </Section>
 
                         {/* Project Manager */}
                         <Section icon={Users} title="Project Manager">
                             <div className="flex items-center gap-3">
-                                <Avatar name={goal.projectManager?.name ?? 'N/A'} avatar={goal.projectManager?.avatar} />
+                                <Avatar name={goal.project_manager?.name ?? 'N/A'} avatar={goal.project_manager?.avatar} />
                                 <span className="text-sm font-semibold text-foreground">
-                                    {goal.projectManager?.name ?? 'Not assigned'}
+                                    {goal.project_manager?.name ?? 'Not assigned'}
                                 </span>
                             </div>
                         </Section>

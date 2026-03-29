@@ -2,79 +2,44 @@
 
 namespace App\Http\Requests;
 
-use App\Models\User;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 class GoalRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
-        $rules = [
-            'project_manager_id' => 'required|exists:users,id',
-            'sdg_id' => 'required|exists:sdgs,id',
+        return [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'start_date'         => ['required', 'date', 'after_or_equal:today'],
-            'end_date'           => [
-                'required',
-                'date',
-                'after_or_equal:start_date',
-            ],
-            'type' => 'required|in:short,long',
-            'assigned_users.*' => [
-                'nullable',
-                'exists:users,id',
-                // function ($attribute, $value, $fail) {
-                //     $user = User::find($value);
-                //     if (!$user) {
-                //         return $fail("Selected user does not exist.");
-                //     }
-                //     if ($user->id === Auth::id()) {
-                //         return $fail("You cannot assign a goal to yourself.");
-                //     }
-                //     if (!$user->hasRole('staff')) {
-                //         return $fail("Only users with the 'staff' role can be assigned.");
-                //     }
-                // }
-            ],
+            'project_manager_id' => 'required|exists:users,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'type' => 'required|in:long,short',
+            'assigned_users' => 'array',
+            'assigned_users.*' => 'exists:users,id',
+            // sdg_id is now optional since we set it from sdg_ids
+            'sdg_id' => 'sometimes|exists:sdgs,id',
+            // sdg_ids is required for multi-SDG assignment
+            'sdg_ids' => 'required|array|min:1',
+            'sdg_ids.*' => 'exists:sdgs,id',
         ];
-        return $rules;
     }
-
-    public function messages()
+    
+    public function messages(): array
     {
         return [
-            'project_manager_id.required' => 'Project manager is required.',
-            'project_manager_id.exists' => 'Project manager does not exist.',
-            'sdg_id.required' => 'SDG is required.',
-            'sdg_id.exists' => 'SDG does not exist.',
-            'title.required' => 'Title is required.',
-            'title.max' => 'Title cannot exceed 255 characters.',
-            'description.required' => 'Description is required.',
-            'start_date.required' => 'Start date is required.',
-            'start_date.date' => 'Start date must be a date.',
-            'start_date.after_or_equal' => 'Start date must be after or equal to today.',
-            'end_date.required' => 'End date is required.',
-            'end_date.date' => 'End date must be a date.',
+            'title.required' => 'Please provide a goal title.',
+            'description.required' => 'Please provide a goal description.',
+            'start_date.required' => 'Please select a start date.',
+            'end_date.required' => 'Please select an end date.',
             'end_date.after_or_equal' => 'End date must be after or equal to start date.',
-            'type.required' => 'Type is required.',
-            'type.in' => 'Type must be either short or long.',
-            'assigned_users.*.exists' => 'Selected user does not exist.',
+            'sdg_ids.required' => 'Please select at least one SDG for this goal.',
+            'sdg_ids.min' => 'Please select at least one SDG for this goal.',
         ];
     }
 }

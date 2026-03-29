@@ -4,18 +4,27 @@ import { DeleteConfirmationDialog } from "@/components/delete-confirmation-modal
 import { Button } from "@/components/ui/button";
 import { injectStyles } from "@/utils/style";
 import { Link, router } from "@inertiajs/react";
-import { Pencil, Trash2, Plus, Target } from "lucide-react";
+import { Pencil, Trash2, Plus, Target, ImageOff } from "lucide-react";
 import { useState } from "react";
 
 interface FlashProps extends Record<string, any> {
     flash?: { success?: string; error?: string; }
 }
 
+// Fallback image SVG (inline as data URI or use a local file)
+const FALLBACK_IMAGE = '/images/sdg-placeholder.jpg'; // Or use a data URI
+// Alternative: Use a colorful SVG placeholder
+const COLORFUL_FALLBACK = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%233B82F6"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="24" font-family="monospace"%3ESDG%3C/text%3E%3C/svg%3E';
+
 function SDGCard({ sdg, index, featured = false, onDelete }: {
     sdg: any; index: number; featured?: boolean;
     onDelete: (sdg: { id: number; slug: string; name: string }) => void;
 }) {
     injectStyles();
+    
+    // Check if image exists and is valid
+    const [imgError, setImgError] = useState(false);
+    const imageUrl = sdg.cover_photo && !imgError ? sdg.cover_photo : null;
 
     return (
         <article
@@ -55,17 +64,22 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
                     </div>
                 )}
 
-                <img
-                    src={sdg.cover_photo}
-                    alt={`Cover photo for ${sdg.name}`}
-                    className="sdg-image h-full w-full object-cover"
-                    loading="lazy"
-                />
+                {/* Image with fallback */}
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={`Cover photo for ${sdg.name}`}
+                        className="sdg-image h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <img src="sdg-placeholder.png" alt="" />
+                )}
             </div>
 
-            {/* Content */}
+            {/* Content (same as before) */}
             <div className="flex flex-1 flex-col p-5">
-                {/* 10% accent label */}
                 <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-accent">
                     Goal {sdg.id}
                 </p>
@@ -80,9 +94,7 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
 
                 <div className="my-4 h-px bg-border" />
 
-                {/* Actions */}
                 <div className="flex items-center gap-2">
-                    {/* Explore — ghost, yellow fill on hover */}
                     <Link
                         as="button"
                         className="flex-1 rounded-xl border-2 border-border p-2 text-sm font-semibold text-muted-foreground transition-all duration-200
@@ -94,7 +106,6 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
                         Explore <span className="ms-2">&rarr;</span>
                     </Link>
 
-                    {/* Edit — 60% primary bg, 30% secondary icon */}
                     <Link
                         as="button"
                         className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-all duration-200
@@ -106,7 +117,6 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
                         <Pencil className="h-4 w-4" />
                     </Link>
 
-                    {/* Delete — 10% accent bg */}
                     <Button
                         className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground transition-all duration-200
                                    active:scale-95 hover:brightness-110 hover:shadow-md
@@ -157,7 +167,6 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                 {/* Header */}
                 <div className="sdg-header mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex items-start gap-4">
-                        {/* 60% primary icon lockup */}
                         <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg">
                             <Target className="h-7 w-7 text-primary-foreground" />
                         </div>
@@ -169,7 +178,6 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                                 Sustainable{' '}
                                 <span className="relative inline-block text-primary">
                                     Development
-                                    {/* 30% secondary underline */}
                                     <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-secondary" />
                                 </span>{' '}
                                 Goals
@@ -177,16 +185,13 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                         </div>
                     </div>
 
-                    {/* Count + Add */}
                     <div className="flex flex-col items-start gap-3 sm:items-end">
                         <p className="text-sm text-muted-foreground">
-                            {/* 30% secondary pill */}
                             <span className="mr-1 inline-block rounded-md bg-secondary px-2 py-0.5 text-xs font-black text-secondary-foreground">
                                 {sdgs.length}
                             </span>
                             goals configured
                         </p>
-                        {/* 60% primary CTA */}
                         <Link
                             as="button"
                             className="add-goal-btn sdg-btn-shimmer inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200

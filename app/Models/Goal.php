@@ -31,15 +31,6 @@ class Goal extends Model
         'compliance_percentage' => 'decimal:2',
     ];
 
-    // // This model ensures the end_date is set to the end of the day (11:59:59 PM)
-    // public function setEndDateAttribute($value)
-    // {
-    //     $this->attributes['end_date'] = Carbon::parse($value)->endOfDay();
-    // }
-
-    // public function setStartDateAttribute($value)
-    // {
-    //     $this->attributes['start_date'] = Carbon::parse($value)->now();
     // }
 
     public function getRouteKeyName(): string
@@ -59,9 +50,9 @@ class Goal extends Model
         });
     }
 
-    public function sdg(): BelongsTo
+    public function sdgs()
     {
-        return $this->belongsTo(Sdg::class);
+        return $this->goalWithSdgs();
     }
 
     public function projectManager(): BelongsTo
@@ -78,5 +69,10 @@ class Goal extends Model
     public function tasks()
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function goalWithSdgs() 
+    {
+        return $this->belongsToMany(Sdg::class, 'goal_sdg', 'goal_id', 'sdg_id')->withTimestamps();
     }
 }

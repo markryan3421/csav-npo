@@ -31,4 +31,8 @@ class Sdg extends Model
         return $this->belongsToMany(User::class, 'sdg_user', 'sdg_id', 'user_id')
             ->withTimestamps();
     }
+
+    public function sdgWithGoals() {
+        return $this->belongsToMany(Goal::class, 'goal_sdg', 'sdg_id', 'goal_id')->withTimestamps();
+    }
 }

@@ -18,69 +18,114 @@ class GoalController extends Controller
     ) {}
 
     /**
-     * GET /{sdg}/goals
-     * List all goals for the given SDG that the auth user owns or is assigned to.
+     * GET /goals
+     *
+     * Visibility rules:
+     *   A goal is visible to the logged-in user if EITHER:
+     *     (a) They are the project manager AND the goal is linked to their current SDG
+     *         via the pivot table.
+     *     (b) They are explicitly assigned to the goal via goal_user pivot —
+     *         regardless of which SDG the goal belongs to, because cross-SDG
+     *         assignment is intentional.
      */
     public function index()
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // current_sdg_id is updated by changeSdg() — this is now the source of truth
-        $currentSdg = $user->currentSdg; // uses the relationship on User model
+        $currentSdg = $user->currentSdg;
 
         if (!$currentSdg) {
-            // User hasn't selected an SDG yet — send them to the dashboard
             return redirect()->route('dashboard');
         }
 
-        $goals = Goal::withoutGlobalScope('sdg')
-            ->where('sdg_id', $currentSdg->id)
-            ->where(function ($q) use ($user) {
+        // No need for withoutGlobalScope since we removed it
+        $goals = Goal::where(function ($q) use ($user, $currentSdg) {
                 $q->where('project_manager_id', $user->id)
-                    ->orWhereHas('assignedUsers', fn($q) => $q->where('users.id', $user->id));
+                ->whereHas('goalWithSdgs', fn ($q) =>
+                    $q->where('sdg_id', $currentSdg->id)
+                );
             })
-            ->with(['assignedUsers:id,name,email', 'projectManager:id,name'])
+            ->orWhere(function ($q) use ($user) {
+                $q->whereHas('assignedUsers', fn ($q) =>
+                    $q->where('user_id', $user->id)
+                );
+            })
+            ->with([
+                'assignedUsers:id,name,email',
+                'projectManager:id,name',
+                'goalWithSdgs:id,name',
+            ])
             ->get();
 
-        $totalGoals        = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->count();
-        $compliantGoals    = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->where('compliance_percentage', 100)->count();
-        $nonCompliantGoals = Goal::withoutGlobalScope('sdg')->where('sdg_id', $currentSdg->id)->where('compliance_percentage', '<', 100)->count();
-        $assignedGoalsCount = $user->goals->count();
+        // Stats — scoped to the user's current SDG only (for the dashboard counts)
+        $totalGoals = Goal::whereHas('goalWithSdgs', fn ($q) =>
+            $q->where('sdg_id', $currentSdg->id)
+        )->count();
+
+        $compliantGoals = Goal::whereHas('goalWithSdgs', fn ($q) =>
+                $q->where('sdg_id', $currentSdg->id)
+            )
+            ->where('compliance_percentage', 100)
+            ->count();
+
+        $nonCompliantGoals = Goal::whereHas('goalWithSdgs', fn ($q) =>
+                $q->where('sdg_id', $currentSdg->id)
+            )
+            ->where('compliance_percentage', '<', 100)
+            ->count();
+
+        // Count all goals assigned to this user across all SDGs
+        $assignedGoalsCount = Goal::whereHas('assignedUsers', fn ($q) =>
+            $q->where('user_id', $user->id)
+        )->count();
 
         return Inertia::render('goals/index', [
-            'selectedSdg'       => $currentSdg,
-            'goals'             => $goals,
-            'totalGoals'        => $totalGoals,
-            'compliantGoals'    => $compliantGoals,
-            'nonCompliantGoals' => $nonCompliantGoals,
+            'selectedSdg'        => $currentSdg,
+            'goals'              => $goals,
+            'totalGoals'         => $totalGoals,
+            'compliantGoals'     => $compliantGoals,
+            'nonCompliantGoals'  => $nonCompliantGoals,
             'assignedGoalsCount' => $assignedGoalsCount,
         ]);
     }
+
     /**
-     * GET /{sdg}/goals/create
-     * Show the create form. Staff list = users in this SDG excluding the creator.
+     * GET /goals/create
      */
     public function create()
     {
         /** @var \App\Models\User $user */
         $authUser = Auth::user();
-        $sdg = $authUser->currentSdg;
 
-        // Users belonging to the same SDG via sdg_user pivot, excluding the creator
-        $staffUsers = User::where('current_sdg_id', '=', $sdg->id)
-            ->where('id', '!=', $authUser->id) // Exclude the current user
+        $allSdgs = Sdg::all();
+
+        $usersBySdg = [];
+        $allUsers = User::where('id', '!=', $authUser->id)
+            ->with('currentSdg')
+            ->get();
+
+        foreach ($allUsers as $user) {
+            if ($user->current_sdg_id) {
+                $usersBySdg[$user->current_sdg_id][] = $user;
+            }
+        }
+
+        $staffUsers = User::where('current_sdg_id', $authUser->current_sdg_id)
+            ->where('id', '!=', $authUser->id)
             ->get();
 
         return Inertia::render('goals/create', [
-            'sdg'        => $sdg,
+            'sdg'        => $authUser->currentSdg,
             'authUser'   => $authUser,
             'staffUsers' => $staffUsers,
+            'allSdgs'    => $allSdgs,
+            'usersBySdg' => $usersBySdg,
         ]);
     }
 
     /**
-     * POST /{sdg}/goals
+     * POST /goals
      */
     public function store(GoalRequest $request)
     {
@@ -88,27 +133,52 @@ class GoalController extends Controller
 
         if (!$sdg) return redirect()->route('dashboard');
 
-        $data = array_merge($request->validated(), ['sdg_id' => $sdg->id]);
+        $sdgIds = $request->input('sdg_ids', []);
 
-        $this->goalService->createGoal($data, Auth::id());
+        if (empty($sdgIds)) {
+            return redirect()->back()->withErrors(['sdg_ids' => 'Please select at least one SDG.']);
+        }
+
+        $data = $request->validated();
+        $data['sdg_id'] = $sdgIds[0];
+
+        $goal = $this->goalService->createGoal($data, Auth::id());
+        $goal->goalWithSdgs()->sync($sdgIds);
 
         return redirect()->route('goals.index')
             ->with('success', 'Goal created successfully.');
     }
 
+    /**
+     * GET /goals/{goal}
+     *
+     * FIX: Load assignedUsers FIRST so ->contains() works correctly.
+     * Then check access: user may view if they are the project manager,
+     * an assigned user, OR the goal is linked to their current SDG.
+     */
     public function show(Goal $goal)
     {
         $user = Auth::user();
         $userRole = $user->getRoleNames()->first() ?? 'staff';
 
+        // Load everything first — including assignedUsers —
+        // so ->contains() below works on the loaded collection, not an empty one.
         $goal->load([
             'projectManager:id,name,avatar',
             'assignedUsers:id,name,email,avatar',
-            'sdg:id,name',
+            'goalWithSdgs:id,name',
             'tasks.taskProductivities.user',
             'tasks.taskProductivities.taskProductivityFiles',
         ]);
-        // dd($goal->toArray());
+
+        // Access is granted if ANY of these is true:
+        $isProjectManager  = $goal->project_manager_id === $user->id;
+        $isAssigned        = $goal->assignedUsers->contains('id', $user->id);
+        $isLinkedToUserSdg = $goal->goalWithSdgs->contains('id', $user->current_sdg_id);
+
+        if (!$isProjectManager && !$isAssigned && !$isLinkedToUserSdg) {
+            abort(403, 'You do not have access to this goal.');
+        }
 
         return Inertia::render('goals/show', [
             'goal'         => $goal,
@@ -118,45 +188,101 @@ class GoalController extends Controller
     }
 
     /**
-     * GET /{sdg}/goals/{goal}/edit
+     * GET /goals/{goal}/edit
+     *
+     * FIX: An assigned user or project manager can edit,
+     * not just someone whose current SDG matches.
      */
     public function edit(Goal $goal)
     {
         $authUser = Auth::user();
         $sdg = $authUser->currentSdg;
 
-        if (!$sdg || $goal->sdg_id !== $sdg->id) abort(404);
+        $goal->load('assignedUsers:id', 'goalWithSdgs:id');
 
-        $staffUsers = User::where('current_sdg_id', $authUser->current_sdg_id)
-            ->where('id', '!=', $authUser->id)
+        $isProjectManager  = $goal->project_manager_id === $authUser->id;
+        $isAssigned        = $goal->assignedUsers->contains('id', $authUser->id);
+        $isLinkedToUserSdg = $goal->goalWithSdgs->contains('id', $authUser->current_sdg_id);
+
+        if (!$isProjectManager && !$isAssigned && !$isLinkedToUserSdg) {
+            abort(403, 'You do not have access to edit this goal.');
+        }
+
+        $allSdgs = Sdg::all();
+
+        $usersBySdg = [];
+        $allUsers = User::where('id', '!=', $authUser->id)
+            ->with('currentSdg')
             ->get();
 
-        $goal->load('assignedUsers:id');
-        $assignedUserIds = $goal->assignedUsers->pluck('id')->toArray();
+        foreach ($allUsers as $user) {
+            if ($user->current_sdg_id) {
+                $usersBySdg[$user->current_sdg_id][] = $user;
+            }
+        }
 
-        return Inertia::render('goals/edit', compact('sdg', 'goal', 'assignedUserIds', 'authUser', 'staffUsers'));
+        $assignedUserIds   = $goal->assignedUsers->pluck('id')->toArray();
+        $associatedSdgIds  = $goal->goalWithSdgs->pluck('id')->toArray();
+
+        return Inertia::render('goals/edit', [
+            'sdg'              => $sdg,
+            'goal'             => $goal,
+            'allSdgs'          => $allSdgs,
+            'associatedSdgIds' => $associatedSdgIds,
+            'assignedUserIds'  => $assignedUserIds,
+            'authUser'         => $authUser,
+            'usersBySdg'       => $usersBySdg,
+        ]);
     }
 
     /**
-     * PUT /{sdg}/goals/{goal}
+     * PUT /goals/{goal}
      */
     public function update(GoalRequest $request, Goal $goal)
     {
-        $sdg = Auth::user()->currentSdg;
+        $authUser = Auth::user();
 
-        if (!$sdg || $goal->sdg_id !== $sdg->id) abort(404);
+        $goal->load('goalWithSdgs:id', 'assignedUsers:id');
 
-        $this->goalService->updateGoal($goal, $request->validated());
+        $isProjectManager  = $goal->project_manager_id === $authUser->id;
+        $isAssigned        = $goal->assignedUsers->contains('id', $authUser->id);
+        $isLinkedToUserSdg = $goal->goalWithSdgs->contains('id', $authUser->current_sdg_id);
+
+        if (!$isProjectManager && !$isAssigned && !$isLinkedToUserSdg) {
+            abort(403, 'You do not have access to update this goal.');
+        }
+
+        $sdgIds = $request->input('sdg_ids', []);
+
+        if (empty($sdgIds)) {
+            return redirect()->back()->withErrors(['sdg_ids' => 'Please select at least one SDG.']);
+        }
+
+        $data = $request->validated();
+        $data['sdg_id'] = $sdgIds[0];
+
+        $this->goalService->updateGoal($goal, $data);
+        $goal->goalWithSdgs()->sync($sdgIds);
 
         return redirect()->route('goals.index')
             ->with('success', 'Goal updated successfully.');
     }
 
     /**
-     * DELETE /{sdg}/goals/{goal}
+     * DELETE /goals/{goal}
+     *
+     * Only the project manager can delete.
      */
     public function destroy(Goal $goal)
     {
+        $user = Auth::user();
+
+        // Only the project manager should be able to delete a goal
+        if ($goal->project_manager_id !== $user->id) {
+            abort(403, 'Only the project manager can delete this goal.');
+        }
+
+        $goal->goalWithSdgs()->detach();
         $goal->delete();
 
         return redirect()
