@@ -1,18 +1,35 @@
 <?php
 
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TaskProductivityController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SdgController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
+
+// Broadcasting auth route (outside auth middleware)
+Route::post('/broadcasting/auth', function () {
+    try {
+        return Broadcast::auth(request());
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 403);
+    }
+})->middleware(['web', 'auth']); // Add 'auth' middleware
+
+// Route::middleware(['auth'])->group(function () {
+//     Route::get('/api/notifications', [NotificationController::class, 'index']);
+//     Route::put('/api/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+//     Route::put('/api/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+// });
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [SdgController::class, 'index'])->name('dashboard');
