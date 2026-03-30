@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Notification extends Model
 {
     protected $table = 'notifications';
-    
+
     protected $fillable = [
         'id',
         'user_id',
         'goal_id',
+        'task_id',
         'type',
         'message',
         'data',
@@ -20,7 +21,7 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'data' => 'array',
+        'data'    => 'array',
         'read_at' => 'datetime',
     ];
 
@@ -32,5 +33,10 @@ class Notification extends Model
     public function goal(): BelongsTo
     {
         return $this->belongsTo(Goal::class);
+    }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
     }
 }

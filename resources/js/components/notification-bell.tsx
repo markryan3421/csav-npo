@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, X, UserPlus, Target } from 'lucide-react';
+import { Bell, X, UserPlus, Target, ClipboardList } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import echo from '@/echo';
 import { showToast } from '@/components/toast';
@@ -9,9 +9,16 @@ interface Notification {
     goal_id: number;
     goal_slug: string;
     goal_title: string;
+    task_id?: number;
+    task_slug?: string;
+    task_title?: string;
     message: string;
     type: string;
-    assigned_by: {
+    assigned_by?: {
+        id: number;
+        name: string;
+    };
+    triggered_by?: {
         id: number;
         name: string;
     };
@@ -28,93 +35,99 @@ export default function NotificationBell() {
 
     useEffect(() => {
         fetchNotifications();
-        
+
         const userId = document.querySelector('meta[name="user-id"]')?.getAttribute('content');
         console.log('Current user ID:', userId);
-        
+
         if (userId && echo) {
-            console.log('Setting up echo listener for user:', userId);
-            
             if (echo.connector && echo.connector.pusher) {
                 echo.connector.pusher.connection.bind('connected', () => {
                     console.log('✅ Connected to Reverb');
                     setIsConnected(true);
                 });
-                
+
                 echo.connector.pusher.connection.bind('error', (err: any) => {
                     console.error('❌ Reverb connection error:', err);
                     setIsConnected(false);
                 });
             }
-            
+
             const channelName = `user.${userId}`;
             console.log('Subscribing to channel:', channelName);
-            
+
             const channel = echo.private(channelName);
-            
+
             channel.subscribed(() => {
                 console.log('✅ Subscribed to channel:', channelName);
             });
-            
+
+            // Goal assignment notifications
             channel.listen('.goal.notification', (data: any) => {
-                console.log('🔔 NOTIFICATION RECEIVED!', data);
-                
-                const notificationKey = `${data.id}-${data.goal_id}-${data.timestamp}`;
-                if (processedNotifications.current.has(notificationKey)) {
-                    console.log('Duplicate notification ignored');
-                    return;
-                }
-                processedNotifications.current.add(notificationKey);
-                
-                handleNotification(data);
+                console.log('🔔 GOAL NOTIFICATION RECEIVED!', data);
+                const key = `${data.id}-${data.goal_id}-${data.timestamp}`;
+                if (processedNotifications.current.has(key)) return;
+                processedNotifications.current.add(key);
+                handleNotification(data, 'goal');
+            });
+
+            // Task notifications
+            channel.listen('.task.notification', (data: any) => {
+                console.log('🔔 TASK NOTIFICATION RECEIVED!', data);
+                const key = `${data.id}-${data.task_id}-${data.timestamp}`;
+                if (processedNotifications.current.has(key)) return;
+                processedNotifications.current.add(key);
+                handleNotification(data, 'task');
             });
         }
-        
+
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
-        
+
         return () => {
             if (echo && userId) {
-                echo.leaveChannel(`user.${userId}`);
+                echo.leaveChannel(`private-user.${userId}`);
             }
         };
     }, []);
 
-    const handleNotification = (data: any) => {
+    const handleNotification = (data: any, source: 'goal' | 'task') => {
         if (!data || !data.goal_id || !data.message) {
             console.error('Invalid notification data:', data);
             return;
         }
-        
-        // Show toast notification
+
         showToast.info(data.message);
-        
+
         const newNotification: Notification = {
             id: data.id ? data.id.toString() : Date.now().toString(),
             goal_id: data.goal_id,
             goal_slug: data.goal_slug || data.goal_id.toString(),
             goal_title: data.goal_title || `Goal ${data.goal_id}`,
+            task_id: data.task_id,
+            task_slug: data.task_slug,
+            task_title: data.task_title,
             message: data.message,
-            type: data.type || 'assigned',
-            assigned_by: data.assigned_by || { id: 0, name: 'System' },
+            type: data.type || (source === 'task' ? 'task_created' : 'assigned'),
+            assigned_by: data.assigned_by,
+            triggered_by: data.triggered_by,
             timestamp: data.timestamp || new Date().toISOString(),
             read: false,
         };
-        
+
         setNotifications(prev => {
             const exists = prev.some(n => n.id === newNotification.id);
             if (exists) return prev;
             return [newNotification, ...prev];
         });
-        
+
         setUnreadCount(prev => prev + 1);
-        
+
         if (Notification.permission === 'granted') {
-            new Notification('New Goal Assignment', {
-                body: data.message,
-                icon: '/favicon.ico',
-            });
+            new Notification(
+                source === 'task' ? 'New Task Notification' : 'New Goal Assignment',
+                { body: data.message, icon: '/favicon.ico' }
+            );
         }
     };
 
@@ -127,15 +140,12 @@ export default function NotificationBell() {
                 },
                 credentials: 'same-origin',
             });
-            
+
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
+
             const data = await response.json();
-            const notificationsList = data.notifications || [];
-            const unread = data.unread_count || 0;
-            
-            setNotifications(notificationsList);
-            setUnreadCount(unread);
+            setNotifications(data.notifications || []);
+            setUnreadCount(data.unread_count || 0);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
@@ -152,7 +162,7 @@ export default function NotificationBell() {
                 },
                 credentials: 'same-origin',
             });
-            
+
             if (response.ok) {
                 setNotifications(prev =>
                     prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
@@ -175,7 +185,7 @@ export default function NotificationBell() {
                 },
                 credentials: 'same-origin',
             });
-            
+
             if (response.ok) {
                 setNotifications(prev => prev.map(n => ({ ...n, read: true })));
                 setUnreadCount(0);
@@ -185,12 +195,26 @@ export default function NotificationBell() {
         }
     };
 
+    /**
+     * Resolve the href for a notification.
+     * Task notifications link directly to the task under the goal.
+     */
+    const getNotificationHref = (notification: Notification): string => {
+        if (notification.task_slug && notification.goal_slug) {
+            return `/goals/${notification.goal_slug}/tasks/${notification.task_slug}`;
+        }
+        return `/goals/${notification.goal_slug}`;
+    };
+
     const getNotificationIcon = (type: string) => {
         switch (type) {
             case 'assigned':
                 return <UserPlus className="h-4 w-4 text-primary" />;
             case 'removed':
                 return <X className="h-4 w-4 text-accent" />;
+            case 'task_created':
+            case 'task_updated':
+                return <ClipboardList className="h-4 w-4 text-primary" />;
             default:
                 return <Target className="h-4 w-4 text-secondary" />;
         }
@@ -241,7 +265,7 @@ export default function NotificationBell() {
                                 notifications.map((notification) => (
                                     <Link
                                         key={notification.id}
-                                        href={`/goals/${notification.goal_slug}`}
+                                        href={getNotificationHref(notification)}
                                         className={`block border-b border-border p-4 transition-colors hover:bg-muted/30 ${
                                             !notification.read ? 'bg-primary/5' : ''
                                         }`}
