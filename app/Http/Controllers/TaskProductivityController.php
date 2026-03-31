@@ -3,97 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\GoalProgressUpdater;
+use App\Http\Requests\ApproveResubmissionRequest;
+use App\Http\Requests\RejectSubmissionRequest;
+use App\Http\Requests\StoreSubmissionRequest;
 use App\Models\TaskProductivity;
 use App\Models\Task;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use App\Services\TaskProductivityService;
 use Inertia\Inertia;
 
 class TaskProductivityController extends Controller
 {
     use GoalProgressUpdater;
 
+    public function __construct(protected TaskProductivityService $productivityService)
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    // Views
+    // -------------------------------------------------------------------------
+
     public function submit(Task $task)
     {
         return Inertia::render('productivities/submit', compact('task'));
     }
 
-    public function storeSubmission(Request $request, Task $task)
-    {
-        $goal = $task->goal;
-
-        $request->validate([
-            'subject' => 'required|string|max:255',
-            'comments' => 'nullable|string',
-            'files' => 'required',
-            'files.*' => 'file|mimes:doc,docx,pdf,xls,xlsx,ppt,pptx|max:20480',
-        ]);
-
-        // Check if a productivity record already exists for this user & task today
-        $taskProductivity = TaskProductivity::firstOrCreate(
-            [
-                'task_id' => $task->id,
-                'user_id' => Auth::id(),
-                'date' => now()->toDateString(),
-            ],
-            [
-                'sdg_id' => $task->sdg_id,
-                'goal_id' => $task->goal_id,
-                'subject' => $request->subject,
-                'comments' => $request->comments,
-                'status' => 'pending',
-                'remarks' => 'Pending for review',
-            ]
-        );
-
-        // Attach multiple uploaded files
-        foreach ($request->file('files') as $file) {
-            $filePath = $file->store('task_productivities', 'public');
-
-            $taskProductivity->taskProductivityFiles()->create([
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'file_type' => $file->getClientMimeType(),
-                'file_path' => $filePath,
-            ]);
-        }
-
-        // // Update progress and notify project manager
-        // $this->updateGoalProgress($goal);
-        // $goal->load('projectManager');
-        // $sender = Auth::user();
-
-        // if ($goal->projectManager) {
-        //     $goal->projectManager->notify(new TaskStatusNotification(
-        //         "{$sender->name} submitted a task for {$goal->title}.",
-        //         "Go check it out.",
-        //         route('goals.show', ['goal' => $goal->slug]),
-        //         $goal->id,
-        //         $sender,
-        //         $goal
-        //     ));
-        // }
-
-        return redirect("/goals/$goal->slug")->with('success', 'Task submitted successfully.');
-    }
-
-    // Approve submission
-    public function approveSubmission(TaskProductivity $submission)
-    {
-        $submission->update([
-            'status' => 'approved',
-            'remarks' => "Approved by: " . Auth::user()->name,
-        ]);
-
-        $submission->save();
-
-        $this->updateGoalProgress($submission->task->goal);
-
-        return redirect()->back()->with('success', 'Task approved successfully.');
-    }
-
-    // Reject form
     public function rejectSubmissionForm(TaskProductivity $submission)
     {
         $submission = TaskProductivity::with(['task.goal', 'user', 'taskProductivityFiles'])
@@ -104,155 +38,15 @@ class TaskProductivityController extends Controller
         ]);
     }
 
-    // Reject data
-    public function reject(Request $request, TaskProductivity $submission)
-    {
-        $request->validate([
-            'remarks' => 'required|string|min:3',
-        ]);
-
-        $submission->update([
-            'status' => 'rejected',
-            'remarks' => $request->remarks,
-        ]);
-
-        // Optionally update goal progress if needed
-        // $this->updateGoalProgress($submission->task->goal);
-
-        return redirect("/goals/{$submission->task->goal->slug}")->with('success', 'Submission rejected successfully.');
-    }
-
-    // Resubmit form (rejected)
     public function showResubmitForm(Task $task, $id)
     {
         $productivity = TaskProductivity::with('taskProductivityFiles', 'user')
             ->findOrFail($id);
 
         return Inertia::render('productivities/resubmit', [
-            'task' => $task,
+            'task'       => $task,
             'submission' => $productivity,
         ]);
-    }
-
-    // Resubmit data
-    public function resubmit(Request $request, Task $task, TaskProductivity $submission)
-    {
-        // Validate incoming data from the resubmit form
-        $incomingFields = $request->validate([
-            'subject' => 'required|string|max:255',
-            'comments' => 'nullable|string',
-            'files' => 'required',
-            'files.*' => 'file|mimes:doc,docx,pdf,xls,xlsx,ppt,pptx|max:20480',
-        ]);
-
-        // Find existing productivity
-        $pastSubmissions = TaskProductivity::where('task_id', '=', $task->id)->first();
-
-        // If exists, delete that productivity
-        if ($pastSubmissions) {
-            foreach ($pastSubmissions->taskProductivityFiles as $file) {
-                // delete the files
-                Storage::disk('public')->delete($file->file_path);
-            }
-            // delete DB records
-            $pastSubmissions->taskProductivityFiles()->delete();
-            $pastSubmissions->delete();
-        }
-
-        $updatedSubmission = TaskProductivity::create([
-            'task_id' => $task->id,
-            'user_id' => Auth::id(),
-            'updated_at' => now()->toDateString(),
-            'sdg_id' => $task->sdg_id,
-            'goal_id' => $task->goal_id,
-            'subject' => $incomingFields['subject'],
-            'comments' => $incomingFields['comments'],
-            'status' => 'pending',
-            'remarks' => 'Pending for review',
-            'date' => now()->toDateString(),
-        ]);
-
-        // upload and save the new files
-        foreach ($incomingFields['files'] as $file) {
-            $filePath = $file->store('task_productivities', 'public');
-
-            $updatedSubmission->taskProductivityFiles()->create([
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'file_type' => $file->getClientMimeType(),
-                'file_path' => $filePath,
-            ]);
-        }
-
-        // Update goal progress after resubmission
-        $this->updateGoalProgress($updatedSubmission->task->goal);
-
-        $goal = $task->goal;
-        // // Send notification
-        // $goal->load('projectManager');
-        // $sender = Auth::user(); // The staff submitting that task
-
-        // // Check if the project manager exists
-        // if ($goal->projectManager) {
-        //     $goal->projectManager->notify(new TaskStatusNotification(
-        //         "{$sender->name} resubmitted a task for {$task->title}.",
-        //         "Go check it out.",
-        //         route('goals.show', ['goal' => $goal->slug]),
-        //         $goal->id,
-        //         $sender,
-        //         $goal
-        //     ));
-        // }
-
-        // Redirect back to the goal page or to the task detail
-        return redirect("/goals/$goal->slug")->with('success', 'Task resubmitted successfully.');
-    }
-
-    // Request resubmission
-    public function requestResubmission(Task $task)
-    {
-        $task->update([
-            'status' => 'resubmission_requested',
-            'remarks' => "Requested resubmission by: " . Auth::user()->name,
-        ]);
-
-        $task->save();
-
-        // $this->updateGoalProgress($submission->task->goal);
-
-        return redirect()->back()->with('success', 'Task resubmission requested successfully.');
-    }
-
-    // Approve resubmission
-    public function approveResubmission(Request $request, Task $task)
-    {
-        $request->validate([
-            'deadline' => 'required|date|after_or_equal:today',
-        ]);
-
-        $task->update([
-            'deadline' => $request->deadline,
-            'status' => 'approved_resubmission',
-            'remarks' => "Approved resubmission by: " . Auth::user()->name,
-        ]);
-
-        $task->save();
-
-        // $this->updateGoalProgress($submission->task->goal);
-
-        return redirect()->back()->with('success', 'Task resubmission approved successfully.');
-    }
-
-    public function rejectResubmission(Task $task)
-    {
-        $task->update([
-            'status' => 'rejected_resubmission',
-            'remarks' => "Rejected resubmission by: " . Auth::user()->name,
-        ]);
-
-        $task->save();
-
-        return redirect()->back()->with('success', 'Task resubmission rejected successfully.');
     }
 
     public function lateResubmitForm(Task $task)
@@ -262,68 +56,88 @@ class TaskProductivityController extends Controller
         ]);
     }
 
-    public function storeLateResubmit(Request $request, Task $task)
+    // -------------------------------------------------------------------------
+    // Staff-initiated actions
+    // -------------------------------------------------------------------------
+
+    public function storeSubmission(StoreSubmissionRequest $request, Task $task)
     {
         $goal = $task->goal;
 
-        // (1) For the task itself
-        $incomingFields = $request->validate([
-            'subject' => 'required|string|max:255',
-            'comments' => 'nullable|string',
-            'files' => 'required',
-            'files.*' => 'file|mimes:doc,docx,pdf,xls,xlsx,ppt,pptx|max:20480',
-        ]);
-
-        // (2) For the files being submitted
-        $taskProductivity = TaskProductivity::updateOrCreate(
-            [
-                'task_id' => $task->id,
-                'user_id' => Auth::id(),
-                'updated_at' => now()->toDateString(),
-            ],
-            [
-                'sdg_id' => $task->sdg_id,
-                'goal_id' => $task->goal_id,
-                'subject' => $incomingFields['subject'],
-                'comments' => $incomingFields['comments'],
-                'status' => 'pending',
-                'remarks' => 'Pending for review',
-                'date' => now()->toDateString(),
-            ]
+        $this->productivityService->storeSubmission(
+            $request->validated(),
+            $request->file('files'),
+            $task
         );
 
-        foreach ($incomingFields['files'] as $file) {
-            $filePath = $file->store('task_productivities', 'public');
+        return redirect("/goals/{$goal->slug}")->with('success', 'Task submitted successfully.');
+    }
 
-            $taskProductivity->taskProductivityFiles()->updateOrCreate([
-                'file_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'file_type' => $file->getClientMimeType(),
-                'file_path' => $filePath,
-            ]);
-        }
+    public function resubmit(StoreSubmissionRequest $request, Task $task, TaskProductivity $submission)
+    {
+        $goal = $task->goal;
 
-        // Update goal progress
-        // $this->updateGoalProgress($productivity->task->goal);
+        $this->productivityService->resubmit(
+            $request->validated(),
+            $request->file('files'),
+            $task
+        );
 
-        // // Notify project manager
-        // $goal->load('projectManager');
-        // $sender = Auth::user();
+        $this->updateGoalProgress($goal);
 
-        // if ($goal->projectManager) {
-        //     $action = $task->wasRecentlyCreated ? 'submitted' : 'resubmitted';
+        return redirect("/goals/{$goal->slug}")->with('success', 'Task resubmitted successfully.');
+    }
 
-        //     $goal->projectManager->notify(new TaskStatusNotification(
-        //         "{$sender->name} {$action} a task for {$goal->title}.",
-        //         "Go check it out.",
-        //         route('goals.show', ['goal' => $goal->slug]),
-        //         $goal->id,
-        //         $sender,
-        //         $goal
-        //     ));
-        // }
+    public function storeLateResubmit(StoreSubmissionRequest $request, Task $task)
+    {
+        $goal = $task->goal;
 
-        // Redirect back to the goal page or to the task detail
-        return redirect("/goals/$goal->slug")->with('success', 'Task resubmitted successfully.');
+        $this->productivityService->storeLateResubmit(
+            $request->validated(),
+            $request->file('files'),
+            $task
+        );
+
+        return redirect("/goals/{$goal->slug}")->with('success', 'Task resubmitted successfully.');
+    }
+
+    public function requestResubmission(Task $task)
+    {
+        $this->productivityService->requestResubmission($task);
+
+        return redirect()->back()->with('success', 'Task resubmission requested successfully.');
+    }
+
+    // -------------------------------------------------------------------------
+    // Project Manager actions
+    // -------------------------------------------------------------------------
+
+    public function approveSubmission(TaskProductivity $submission)
+    {
+        $this->productivityService->approveSubmission($submission);
+        $this->updateGoalProgress($submission->task->goal);
+
+        return redirect()->back()->with('success', 'Task approved successfully.');
+    }
+
+    public function reject(RejectSubmissionRequest $request, TaskProductivity $submission)
+    {
+        $this->productivityService->rejectSubmission($submission, $request->validated()['remarks']);
+
+        return redirect("/goals/{$submission->task->goal->slug}")->with('success', 'Submission rejected successfully.');
+    }
+
+    public function approveResubmission(ApproveResubmissionRequest $request, Task $task)
+    {
+        $this->productivityService->approveResubmission($task, $request->validated()['deadline']);
+
+        return redirect()->back()->with('success', 'Task resubmission approved successfully.');
+    }
+
+    public function rejectResubmission(Task $task)
+    {
+        $this->productivityService->rejectResubmission($task);
+
+        return redirect()->back()->with('success', 'Task resubmission rejected successfully.');
     }
 }

@@ -153,7 +153,13 @@
     --sidebar-ring: oklch(0.62 0.22 35);
 }
 
-
+.task-highlight {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    background-color: color-mix(in oklch, var(--primary) 10%, transparent);
+    border-radius: 0.5rem;
+    transition: outline 0.4s ease, background-color 0.4s ease;
+}
 
 @layer base {
     * {

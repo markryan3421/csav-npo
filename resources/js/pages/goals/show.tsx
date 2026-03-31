@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
+import { useTaskHighlight } from '@/hooks/use-task-highlight';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface TaskProductivityFile {
@@ -219,6 +220,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
 
             {/* Task header — clickable to expand */}
             <div
+                id={`task-${task.slug}`}
                 className="flex cursor-pointer items-center justify-between gap-3 bg-muted/30 px-5 py-3.5 transition-colors hover:bg-muted/50"
                 onClick={() => setOpen((v) => !v)}
             >
@@ -572,7 +574,7 @@ function normStatus(s: string) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) {
-    console.log(goal);
+    useTaskHighlight();
     const roleValue = Array.isArray(authUserRole)
         ? (authUserRole[0] ?? 'staff')
         : authUserRole;
