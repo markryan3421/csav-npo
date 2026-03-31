@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -25,93 +25,35 @@ import GoalController from '@/actions/App/Http/Controllers/GoalController';
 
 const ExpendituresItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Your SDGs',
         href: '/dashboard',
         icon: Airplay,
     },
     {
-        title: 'Goals',
+        title: 'Dashboard',
         href: GoalController.index().url,
         icon: Landmark,
+        // permission: 'access goal',
     },
     {
         title: 'Permissions',
         href: '/permissions',
         icon: Lock,
+        permission: 'access permission',
     },
     {
         title: 'Roles',
         href: '/roles',
         icon: Shield,
+        permission: 'access role',
     },
     {
         title: 'Users',
         href: '/users',
         icon: Users,
+        permission: 'access user',
     },
 ];
-
-// const AccessControlItems: NavItem[] = [
-//     {
-//         title: 'Run Payroll',
-//         href: PayrollController.index(),
-//         icon: Banknote,
-//     },
-//     {
-//         title: 'Employees',
-//         href: '/employees',
-//         icon: CircleUser,
-//     },
-//     {
-//         title: 'Application Leaves',
-//         href: ApplicationLeaveController.index(),
-//         icon: Clipboard,
-//     },
-//     {
-//         title: 'Payroll Periods',
-//         href: PayrollPeriodController.index(),
-//         icon: Calendar,
-//     },
-//     {
-//         title: 'Positions',
-//         href: '/positions',
-//         icon: UserCog,
-//     },
-
-//     {
-//         title: 'Logs',
-//         href: LogsController.index(),
-//         icon: History,
-//     },
-// ];
-
-// const AttendanceItems: NavItem[] = [
-//     {
-//         title: 'Attendance',
-//         href: '/attendances',
-//         icon: Users,
-//     },
-//     {
-//         title: 'Attendance Exception Stats',
-//         href: '/attendance-exception-stats',
-//         icon: CircleUser,
-//     },
-//     {
-//         title: 'Attendance Logs',
-//         href: '/attendance-logs',
-//         icon: Contact,
-//     },
-//     {
-//         title: 'Attendance Period Stats',
-//         href: '/attendance-period-stats',
-//         icon: BookUser,
-//     },
-//     {
-//         title: 'Attendance Schedules',
-//         href: '/attendance-schedules',
-//         icon: UserRoundCog,
-//     },
-// ];
 
 const footerNavItems: NavItem[] = [];
 
@@ -119,6 +61,13 @@ export function AppSidebar() {
     const { state } = useSidebar();
     const { isCurrentUrl } = useCurrentUrl(); // Add this hook
     const isExpanded = state === 'expanded';
+
+    // TODO: Refactor to use a custom hook for auth and permissions
+    const { auth } = usePage().props as any;
+    const roles = auth.roles;
+    const permissions = auth.permissions;
+
+    const filterNavItems = ExpendituresItems.filter((item) => !item.permission || permissions.includes(item.permission));
 
     return (
         <Sidebar collapsible="icon" className="border-r-1 bg-white border-gray-400">
@@ -140,7 +89,7 @@ export function AppSidebar() {
             <SidebarContent className={`
                 ${isExpanded ? 'px-5' : '-ml-3 px-5 transition-all duration-200 ease-in-out'}`}
             >
-                <NavMain items={ExpendituresItems} label="Goals" />
+                <NavMain items={filterNavItems} label="Goals" />
                 {/* <NavMain items={AccessControlItems} label="Access Control" /> */}
                 {/* <NavMain items={AttendanceItems} label="Attendance" /> */}
             </SidebarContent>

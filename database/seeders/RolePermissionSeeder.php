@@ -22,24 +22,40 @@ class RolePermissionSeeder extends Seeder
         // Define resources and their actions with human‑readable labels
         $resources = [
             'user' => [
-                'actions' => ['view', 'create', 'edit', 'delete'],
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
                 'label'   => 'User',
             ],
             'role' => [
-                'actions' => ['view', 'create', 'edit', 'delete'],
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
                 'label'   => 'Role',
             ],
             'sdg' => [
-                'actions' => ['view', 'create', 'edit', 'delete'],
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
                 'label'   => 'Sustainable Development Goal',
             ],
             'goal' => [
-                'actions' => ['view', 'create', 'edit', 'delete'],
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
                 'label'   => 'Goal',
             ],
+            'task' => [
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
+                'label'   => 'Task',
+            ],
             'permission' => [
-                'actions' => ['view'],
+                'actions' => ['access', 'view', 'create', 'edit', 'delete'],
                 'label'   => 'Permission',
+            ],
+            'productivity' => [
+                'actions' => [
+                    'access',
+                    'submit',
+                    'resubmit',
+                    'request resubmission',
+                    'approve resubmission',
+                    'approve',
+                    'reject'
+                ],
+                'label' => 'Productivity',
             ],
         ];
 
@@ -53,7 +69,7 @@ class RolePermissionSeeder extends Seeder
                     [
                         'module'      => $resource,
                         'label'       => ucfirst($action) . ' ' . $config['label'],
-                        'description' => "Allow user to $action " . $config['label'] . 's',
+                        'description' => "Allow user to $action " . $config['label'] . ($resource !== 'productivity' ? 's' : ''),
                         'is_active'   => true,
                     ]
                 );
@@ -61,11 +77,20 @@ class RolePermissionSeeder extends Seeder
         }
 
         // Create roles with labels and descriptions
+        $superAdminRole = Role::firstOrCreate(
+            ['name' => 'super-admin', 'guard_name' => 'web'],
+            [
+                'label'       => 'Super Administrator',
+                'description' => 'Complete system access with all permissions including role and permission management.',
+                'is_active'   => true,
+            ]
+        );
+
         $adminRole = Role::firstOrCreate(
             ['name' => 'admin', 'guard_name' => 'web'],
             [
                 'label'       => 'Administrator',
-                'description' => 'Full system access with all permissions.',
+                'description' => 'Full system access except role and permission management.',
                 'is_active'   => true,
             ]
         );
@@ -74,7 +99,7 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'project-manager', 'guard_name' => 'web'],
             [
                 'label'       => 'Project Manager',
-                'description' => 'Can manage most resources except delete operations.',
+                'description' => 'Can manage goals and tasks, and approve/reject productivity submissions.',
                 'is_active'   => true,
             ]
         );
@@ -83,32 +108,110 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'staff', 'guard_name' => 'web'],
             [
                 'label'       => 'Staff',
-                'description' => 'Read‑only access to most resources.',
+                'description' => 'Can submit and manage their own productivity entries.',
                 'is_active'   => true,
             ]
         );
 
-        // Assign all permissions to admin
-        $adminRole->givePermissionTo(Permission::all());
-        $allSdg = Sdg::all();
+        // ============================================================
+        // SUPER ADMIN - Everything (all permissions)
+        // ============================================================
+        $superAdminRole->givePermissionTo(Permission::all());
 
-        // Create an admin user
-        $adminUser = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@gmail.com',
-            'password' => bcrypt('password'),
-            'user_slug' => Str::slug('Admin'),
-        ]);
+        // ============================================================
+        // ADMIN - Everything EXCEPT role & permission module
+        // (including access permissions for all modules except role/permission)
+        // ============================================================
+        $adminPermissions = Permission::where('module', '!=', 'role')
+            ->where('module', '!=', 'permission')
+            ->get();
+        $adminRole->syncPermissions($adminPermissions);
 
-        $adminUser->assignRole($adminRole);
-        $adminUser->sdgs()->sync($allSdg->pluck('id')->toArray());
-
-        // Assign all permissions except those containing 'delete' to project‑manager
-        $managerPermissions = Permission::where('name', 'not like', '%delete%')->get();
+        // ============================================================
+        // PROJECT MANAGER - Goals + Tasks (all CRUD + access) + Productivity approvals + access
+        // ============================================================
+        $managerPermissions = Permission::where(function ($query) {
+            // Goal and Task modules - all actions (access, view, create, edit, delete)
+            $query->whereIn('module', ['goal', 'task']);
+        })->orWhere(function ($query) {
+            // Productivity access + approval actions only
+            $query->where('module', 'productivity')
+                ->whereIn('name', [
+                    'access productivity',
+                    'approve productivity',
+                    'reject productivity',
+                    'approve resubmission productivity'
+                ]);
+        })->get();
+        
         $managerRole->syncPermissions($managerPermissions);
 
-        // Assign only view permissions to staff
-        $staffPermissions = Permission::where('name', 'like', 'view%')->get();
+        // ============================================================
+        // STAFF - Only productivity access + submission actions
+        // ============================================================
+        $staffPermissions = Permission::where('module', 'productivity')
+            ->whereIn('name', [
+                'access productivity',
+                'submit productivity',
+                'resubmit productivity',
+                'request resubmission productivity'
+            ])
+            ->get();
+        
         $staffRole->syncPermissions($staffPermissions);
+
+        // ============================================================
+        // Create users with appropriate SDG assignments
+        // ============================================================
+        $allSdgs = Sdg::all();
+        $sdgIds = $allSdgs->pluck('id')->toArray();
+
+        // Create Super Admin user
+        $superAdminUser = User::firstOrCreate(
+            ['email' => 'superadmin@gmail.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('password'),
+                'user_slug' => Str::slug('Super Admin'),
+            ]
+        );
+        $superAdminUser->assignRole($superAdminRole);
+        $superAdminUser->sdgs()->sync($sdgIds);
+
+        // Create Admin user
+        $adminUser = User::firstOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'name' => 'Admin',
+                'password' => bcrypt('password'),
+                'user_slug' => Str::slug('Admin'),
+            ]
+        );
+        $adminUser->assignRole($adminRole);
+        $adminUser->sdgs()->sync($sdgIds);
+
+        // Create Project Manager user
+        $managerUser = User::firstOrCreate(
+            ['email' => 'projectmanager@gmail.com'],
+            [
+                'name' => 'Project Manager',
+                'password' => bcrypt('password'),
+                'user_slug' => Str::slug('Project Manager'),
+            ]
+        );
+        $managerUser->assignRole($managerRole);
+        $managerUser->sdgs()->sync($sdgIds);
+
+        // Create Staff user
+        $staffUser = User::firstOrCreate(
+            ['email' => 'staff@gmail.com'],
+            [
+                'name' => 'Staff',
+                'password' => bcrypt('password'),
+                'user_slug' => Str::slug('Staff'),
+            ]
+        );
+        $staffUser->assignRole($staffRole);
+        $staffUser->sdgs()->sync($sdgIds);
     }
 }
