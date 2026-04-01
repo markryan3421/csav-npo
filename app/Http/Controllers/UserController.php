@@ -25,7 +25,7 @@ class UserController extends Controller
         $staffUsers = User::with('roles')
             ->where('current_sdg_id', $user->current_sdg_id)
             ->where('id', '!=', $user->id)
-            ->role(['staff', 'project-manager', 'admin'])
+            ->role(['staff', 'project-manager', 'admin', 'super-admin'])
             ->get()
             ->map(function ($user) {
                 return [

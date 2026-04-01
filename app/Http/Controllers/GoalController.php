@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\HasPaginatedIndex;
 use App\Http\Requests\GoalRequest;
 use App\Models\Goal;
 use App\Models\Sdg;
@@ -13,6 +14,8 @@ use Inertia\Inertia;
 
 class GoalController extends Controller
 {
+    use HasPaginatedIndex;
+
     public function __construct(
         protected GoalService $goalService
     ) {}
@@ -28,7 +31,7 @@ class GoalController extends Controller
      *         regardless of which SDG the goal belongs to, because cross-SDG
      *         assignment is intentional.
      */
-    public function index()
+    public function index(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -80,9 +83,25 @@ class GoalController extends Controller
             $q->where('user_id', $user->id)
         )->count();
 
+        $result = $this->paginateCollection(
+            items: collect($goals), // wrap in Collection if not already
+            request: $request,
+            searchColumns: ['title', 'description'], // adjust to Goal columns
+        );
+
         return Inertia::render('goals/index', [
+            'goals'      => [
+                'data' => $result['data'],
+                'links' => $result['pagination']['links'] ?? [],
+                'from' => $result['pagination']['from'] ?? 0,
+                'to' => $result['pagination']['to'] ?? 0,
+                'total' => $result['totalCount'],
+            ],
+            'filters'       => $result['filters'],
+            'totalCount'    => $result['totalCount'],
+            'filteredCount' => $result['filteredCount'],
+            
             'selectedSdg'        => $currentSdg,
-            'goals'              => $goals,
             'totalGoals'         => $totalGoals,
             'compliantGoals'     => $compliantGoals,
             'nonCompliantGoals'  => $nonCompliantGoals,

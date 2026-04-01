@@ -1,27 +1,42 @@
-import { Link } from "@inertiajs/react";
 import * as LucidIcons from "lucide-react";
+import { useRoute } from "ziggy-js";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ─── Brand tokens (60-30-10) ──────────────────────────────────────────────────
+// 60% → Deep Forest Green (primary)    — header, index badges, primary actions
+// 30% → Electric Yellow (secondary)    — accents, highlights, important states
+// 10% → Orange-Red (accent/destructive) — delete actions, critical states
+
 interface TableColumn {
     label: string;
     key: string;
+    isBadge?: boolean;
+    render?: (row: any) => React.ReactNode;
     isImage?: boolean;
     isAction?: boolean;
     className?: string;
-    type?: string;
+    isDate?: boolean;
 }
 
 interface ActionConfig {
     label: string;
     icon: keyof typeof LucidIcons;
-    url?: string;
+    route: string;
     className?: string;
 }
 
 interface TableRow {
     [key: string]: any;
+    id?: string | number;
 }
 
 interface CustomTableProps {
@@ -29,256 +44,511 @@ interface CustomTableProps {
     actions: ActionConfig[];
     data: TableRow[];
     from: number;
-    onDelete: (id: number) => void;
+    to?: number;
+    total?: number;
+    filteredCount?: number;
+    totalCount?: number;
+    searchTerm?: string;
+    onDelete: (row: TableRow) => void;
     onView: (row: TableRow) => void;
     onEdit: (row: TableRow) => void;
-    isModal?: boolean;
+    title?: string;
+    toolbar?: React.ReactNode;
+    filterEmptyState?: React.ReactNode;
 }
 
-// ── Action button renderer ────────────────────────────────────────────────────
-function ActionButtons({ row, actions, isModal, onDelete, onView, onEdit }: {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatCellValue(col: TableColumn, row: TableRow): string {
+    const val = row[col.key];
+    if (val === null || val === undefined) return "—";
+
+    const dateTimeKeys = ["time_in", "time_out"];
+    const dateOnlyKeys = ["created_at", "period_start", "period_end", "date"];
+
+    if (dateTimeKeys.includes(col.key)) {
+        return new Date(val).toLocaleTimeString("en-US", {
+            hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC",
+        });
+    }
+    if (dateOnlyKeys.includes(col.key)) {
+        return new Date(val).toLocaleDateString("en-US", {
+            day: "2-digit", month: "short", year: "numeric",
+        });
+    }
+    return String(val);
+}
+
+// Row-number badge — Deep Forest Green (60%)
+function IndexBadge({ value }: { value: number }) {
+    return (
+        <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary font-black text-[11px] tabular-nums"
+        >
+            {value}
+        </motion.span>
+    );
+}
+
+// Cell value — handles all display types
+function CellValue({ col, row }: { col: TableColumn; row: TableRow }) {
+    // Render row (for relationships)
+    if (col.render) {
+        const rendered = col.render(row);
+        if (col.isBadge) {
+            return (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border border-primary/15 dark:border-primary/30 whitespace-nowrap">
+                    {rendered}
+                </span>
+            );
+        }
+        return <>{rendered}</>;
+    }
+
+    // Image row
+    if (col.isImage) {
+        return (
+            <div className="flex justify-center">
+                <motion.img
+                    src={row[col.key] as string}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover border border-border transition-all duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] hover:scale-125 hover:shadow-lg hover:z-10 relative"
+                    whileHover={{ scale: 1.25 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                />
+            </div>
+        );
+    }
+
+    // Badge row
+    if (col.isBadge) {
+        const rendered = col.render ? col.render(row) : formatCellValue(col, row);
+        return (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary border border-primary/15 dark:border-primary/30 whitespace-nowrap">
+                {rendered}
+            </span>
+        );
+    }
+
+    // Date row
+    if (col.isDate) {
+        return (
+            <span className="text-[13px] font-medium text-foreground/70 whitespace-nowrap">
+                {new Date(row[col.key]).toLocaleDateString("en-US", {
+                    year: "numeric", month: "short", day: "numeric",
+                })}
+            </span>
+        );
+    }
+
+    // Default row
+    return (
+        <span className="block truncate max-w-[220px] text-foreground/80">
+            {formatCellValue(col, row)}
+        </span>
+    );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyState({ message = "No records found" }: { message?: string }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="flex flex-col items-center justify-center py-20 px-6 text-center"
+        >
+            <div className="w-14 h-14 rounded-2xl bg-primary/8 dark:bg-primary/15 border border-primary/12 dark:border-primary/25 flex items-center justify-center mb-4">
+                <LucidIcons.Inbox className="w-6 h-6 text-primary/40 dark:text-primary/40" strokeWidth={1.5} />
+            </div>
+            <p className="text-[14px] font-bold text-foreground mb-1">
+                {message}
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+                There is no data to display right now.
+            </p>
+        </motion.div>
+    );
+}
+
+// ─── Action dropdown ──────────────────────────────────────────────────────────
+function ActionDropdown({
+    row,
+    actions,
+    onDelete,
+    onView,
+    onEdit,
+    route,
+}: {
     row: TableRow;
     actions: ActionConfig[];
-    isModal?: boolean;
-    onDelete: (id: number) => void;
-    onView: (row: TableRow) => void;
-    onEdit: (row: TableRow) => void;
+    onDelete: (r: TableRow) => void;
+    onView: (r: TableRow) => void;
+    onEdit: (r: TableRow) => void;
+    route: ReturnType<typeof useRoute>;
 }) {
+    const nonDestructive = actions.filter(a => a.label !== "Delete");
+    const destructive = actions.filter(a => a.label === "Delete");
+
+    const handleAction = (action: ActionConfig) => {
+        if (action.label === "Delete") {
+            if (row.id !== undefined && row.id !== null) {
+                onDelete(row);
+            } else {
+                console.error('Cannot delete: row has no id', row);
+            }
+        } else if (action.label === "View") {
+            onView(row);
+        } else if (action.label === "Edit") {
+            onEdit(row);
+        } else if (action.route) {
+            if (row.id !== undefined && row.id !== null) {
+                window.location.href = route(action.route, row.id);
+            } else {
+                console.error('Cannot navigate: row has no id', row);
+            }
+        }
+    };
+
     return (
-        <div className="flex items-center justify-center gap-1.5">
-            {actions.map((action, index) => {
-                const IconComponent = LucidIcons[action.icon] as React.ElementType;
-
-                // ── View (modal) ──────────────────────────────────────────
-                if (isModal && action.label === 'View') {
-                    return (
-                        <button
-                            key={index}
-                            onClick={() => onView(row)}
-                            title="View"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground
-                                       transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground
-                                       active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-                        >
-                            <IconComponent size={14} />
-                        </button>
-                    );
-                }
-
-                // ── Edit (modal) ──────────────────────────────────────────
-                if (isModal && action.label === 'Edit') {
-                    return (
-                        <button
-                            key={index}
-                            onClick={() => onEdit(row)}
-                            title="Edit"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground
-                                       transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground
-                                       active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-                        >
-                            <IconComponent size={14} />
-                        </button>
-                    );
-                }
-
-                // ── Delete ────────────────────────────────────────────────
-                if (action.label === 'Delete') {
-                    return (
-                        <button
-                            key={index}
-                            onClick={() => onDelete(row.id)}
-                            title="Delete"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent bg-accent/10 text-accent
-                                       transition-all duration-150 hover:bg-accent hover:text-accent-foreground
-                                       active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
-                        >
-                            <IconComponent size={14} />
-                        </button>
-                    );
-                }
-
-                // ── Link action (e.g. Show) ────────────────────────────────
-                return (
-                    <Link
-                        key={index}
-                        as="button"
-                        href={action.url ?? '#'}
-                        title={action.label}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground
-                                   transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground
-                                   active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+        <div className="flex justify-center">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-primary/8 dark:hover:bg-primary/20 hover:text-primary transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     >
-                        <IconComponent size={14} />
-                    </Link>
-                );
-            })}
+                        <span className="sr-only">Open menu</span>
+                        <LucidIcons.EllipsisVertical className="w-4 h-4" />
+                    </motion.button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                    align="end"
+                    className="min-w-[160px] rounded-xl border border-border bg-card shadow-xl p-1"
+                >
+                    {nonDestructive.map((action, i) => {
+                        const Icon = LucidIcons[action.icon] as React.ElementType;
+                        return (
+                            <DropdownMenuItem
+                                key={i}
+                                onClick={() => handleAction(action)}
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-foreground/80 hover:bg-primary/8 hover:text-primary cursor-pointer transition-colors focus:bg-primary/8 focus:text-primary"
+                            >
+                                <Icon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} />
+                                {action.label}
+                            </DropdownMenuItem>
+                        );
+                    })}
+
+                    {destructive.length > 0 && nonDestructive.length > 0 && (
+                        <DropdownMenuSeparator className="my-1 border-border" />
+                    )}
+                    {destructive.map((action, i) => {
+                        const Icon = LucidIcons[action.icon] as React.ElementType;
+                        return (
+                            <DropdownMenuItem
+                                key={i}
+                                onClick={() => handleAction(action)}
+                                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-accent hover:bg-accent/8 dark:hover:bg-accent/15 cursor-pointer transition-colors focus:bg-accent/8 focus:text-accent"
+                            >
+                                <Icon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} />
+                                {action.label}
+                            </DropdownMenuItem>
+                        );
+                    })}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ─── Main component ────────────────────────────────────────────────────────────
 export const CustomTable = ({
-    columns, actions, data, from,
-    onDelete, onView, onEdit, isModal,
+    columns,
+    actions,
+    data,
+    from,
+    to,
+    total,
+    filteredCount,
+    totalCount,
+    searchTerm,
+    onDelete,
+    onView,
+    onEdit,
+    title,
+    toolbar,
+    filterEmptyState,
 }: CustomTableProps) => {
+    const route = useRoute();
+
+    const dataColumns = columns.filter(col => !col.isAction);
+    const hasActions = columns.some(col => col.isAction);
+    const actionProps = { actions, onDelete, onView, onEdit, route };
+
+    const getHeaderRecordDisplayText = () => {
+        if (searchTerm && filteredCount !== undefined && totalCount !== undefined) {
+            return (
+                <>
+                    Showing <span className="font-black text-primary-foreground">{data.length}</span> of{' '}
+                    <span className="font-black text-primary-foreground">{filteredCount.toLocaleString()}</span> filtered records
+                    <span className="text-primary-foreground/60 ml-1">
+                        (from {totalCount.toLocaleString()} total)
+                    </span>
+                </>
+            );
+        }
+        
+        if (total !== undefined && total > 0) {
+            return (
+                <>
+                    Showing <span className="font-black text-primary-foreground">{to || from + data.length - 1}</span> of{' '}
+                    <span className="font-black text-primary-foreground">{total.toLocaleString()}</span> records
+                </>
+            );
+        }
+        
+        return (
+            <>
+                Showing <span className="font-black text-primary-foreground">{data.length}</span> records
+            </>
+        );
+    };
+
+    const getFooterRecordDisplayText = () => {
+        if (searchTerm && filteredCount !== undefined && totalCount !== undefined) {
+            return (
+                <>
+                    Showing <span className="font-black text-foreground">{data.length}</span> of{' '}
+                    <span className="font-black text-foreground">{filteredCount.toLocaleString()}</span> filtered records
+                    <span className="text-muted-foreground ml-1">
+                        (from {totalCount.toLocaleString()} total)
+                    </span>
+                </>
+            );
+        }
+        
+        if (total !== undefined && total > 0) {
+            return (
+                <>
+                    Showing <span className="font-black text-foreground">{to || from + data.length - 1}</span> of{' '}
+                    <span className="font-black text-foreground">{total.toLocaleString()}</span> records
+                </>
+            );
+        }
+        
+        return (
+            <>
+                Showing <span className="font-black text-foreground">{data.length}</span> records
+            </>
+        );
+    };
+
+    const isEmpty = !data || data.length === 0;
+
     return (
-        <>
-            {/* Inject animations once */}
-            <style>{`
-                @keyframes tableRowIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-                .table-row-animate {
-                    animation: tableRowIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-                }
-                @keyframes tableHeadIn {
-                    from { opacity: 0; transform: translateY(-8px); }
-                    to   { opacity: 1; transform: translateY(0); }
-                }
-                .table-head-animate {
-                    animation: tableHeadIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-                }
-            `}</style>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full font-sans"
+        >
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                {/* Header bar — Deep Forest Green (60%) */}
+                <div className="flex items-center gap-3 px-5 py-4 bg-primary">
+                    <div className="w-8 h-8 rounded-lg bg-primary-foreground/15 flex items-center justify-center flex-shrink-0">
+                        <LucidIcons.Table2 className="w-4 h-4 text-primary-foreground" strokeWidth={1.75} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-primary-foreground leading-tight truncate">
+                            {title ?? "Data Table"}
+                        </p>
+                        <p className="text-[11px] text-primary-foreground/60 mt-0.5">
+                            {getHeaderRecordDisplayText()}
+                        </p>
+                    </div>
+                </div>
 
-            {/*
-              Responsive strategy:
-              - Mobile  (<640px): horizontal scroll with sticky # column
-              - Tablet  (≥640px): full table visible, tighter padding
-              - Desktop (≥1024px): generous padding, hover effects
-            */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full min-w-[600px] border-collapse text-sm">
+                {/* Toolbar slot */}
+                {toolbar && (
+                    <div className="px-5 py-4 border-b border-border bg-muted/30">
+                        {toolbar}
+                    </div>
+                )}
 
-                        {/* ── Header ── */}
+                {/* MOBILE (< 768px) — stacked field cards */}
+                <div className="block md:hidden">
+                    <div className="divide-y divide-border">
+                        {isEmpty ? (
+                            filterEmptyState ?? <EmptyState />
+                        ) : (
+                        <AnimatePresence>
+                            {data.map((row, index) => (
+                                <motion.div
+                                    key={row.id || index}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                    className="px-4 py-4 bg-card hover:bg-muted/30 transition-colors duration-150"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <IndexBadge value={from + index} />
+                                        {hasActions && (
+                                            <ActionDropdown
+                                                {...actionProps}
+                                                row={row}
+                                            />
+                                        )}
+                                    </div>
+
+                                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                        {dataColumns.map(col => (
+                                            <div key={col.key} className="flex flex-col min-w-0">
+                                                <dt className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-0.5 truncate">
+                                                    {col.label}
+                                                </dt>
+                                                <dd className="text-[13px] text-foreground/80 overflow-hidden">
+                                                    <CellValue col={col} row={row} />
+                                                </dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+                {/* TABLET (768px – 1023px) — 2-col card grid */}
+                <div className="hidden md:block lg:hidden">
+                    <div className="p-4 grid grid-cols-2 gap-3">
+                        {isEmpty ? (
+                            filterEmptyState ?? <EmptyState />
+                        ) : (
+                        <AnimatePresence>
+                            {data.map((row, index) => (
+                                <motion.div
+                                    key={row.id || index}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                    className="rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
+                                >
+                                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-border">
+                                        <IndexBadge value={from + index} />
+                                        {hasActions && (
+                                            <ActionDropdown
+                                                {...actionProps}
+                                                row={row}
+                                            />
+                                        )}
+                                    </div>
+
+                                    <dl className="space-y-2">
+                                        {dataColumns.map(col => (
+                                            <div key={col.key} className="flex items-start justify-between gap-3 min-w-0">
+                                                <dt className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground shrink-0 pt-0.5">
+                                                    {col.label}
+                                                </dt>
+                                                <dd className="text-[12.5px] font-medium text-foreground/80 text-right overflow-hidden max-w-[55%]">
+                                                    <CellValue col={col} row={row} />
+                                                </dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+                {/* DESKTOP (≥ 1024px) — full data table */}
+                <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full border-collapse text-[13px]">
                         <thead>
-                            <tr className="table-head-animate border-b border-border bg-primary">
-                                {/* Row number */}
-                                <th className="w-12 px-4 py-3.5 text-center text-[10px] font-black uppercase tracking-widest text-primary-foreground/70">
+                            <tr className="border-b border-border bg-muted/50">
+                                <th className="w-14 px-5 py-3 text-center text-[10px] font-black tracking-widest uppercase text-primary whitespace-nowrap">
                                     #
                                 </th>
-
-                                {columns.map((column) => (
+                                {columns.map(col => (
                                     <th
-                                        key={column.key}
-                                        className={`px-4 py-3.5 text-left text-[10px] font-black uppercase tracking-widest text-primary-foreground/70 ${column.isAction ? 'text-center' : ''} ${column.className ?? ''}`}
+                                        key={col.key}
+                                        className={`px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase whitespace-nowrap text-muted-foreground ${col.className ?? ""}`}
                                     >
-                                        {column.label}
+                                        {col.label}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
 
-                        {/* ── Body ── */}
-                        <tbody className="divide-y divide-border">
-                            {data.length > 0 ? (
-                                data.map((row, index) => (
-                                    <tr
-                                        key={index}
-                                        className="table-row-animate group transition-colors duration-150 hover:bg-primary/5"
-                                        style={{ animationDelay: `${index * 40}ms` }}
+                        <tbody>
+                            {isEmpty ? (
+                                <tr>
+                                    <td colSpan={columns.length + 1}>
+                                        {filterEmptyState ?? <EmptyState />}
+                                    </td>
+                                </tr>
+                            ) : (
+                            <AnimatePresence>
+                                {data.map((row, index) => (
+                                    <motion.tr
+                                        key={row.id || index}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ duration: 0.3, delay: index * 0.03 }}
+                                        className="group border-b border-border last:border-0 bg-card hover:bg-primary/5 transition-colors duration-150"
                                     >
-                                        {/* Row number — subtle secondary accent on hover */}
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-black text-muted-foreground transition-all duration-150 group-hover:bg-secondary group-hover:text-secondary-foreground">
-                                                {from + index}
-                                            </span>
+                                        <td className="px-5 py-3.5 text-center align-middle">
+                                            <IndexBadge value={from + index} />
                                         </td>
 
-                                        {columns.map((col) => (
+                                        {columns.map(col => (
                                             <td
                                                 key={col.key}
-                                                className={`px-4 py-3 ${col.isAction ? 'text-center' : 'text-left'} ${col.className ?? ''}`}
+                                                className={`px-4 py-3.5 align-middle text-left text-foreground/80 overflow-hidden ${col.className ?? ""}`}
                                             >
-                                                {/* Image cell */}
-                                                {col.isImage ? (
-                                                    <div className="flex justify-center">
-                                                        <img
-                                                            src={row[col.key]}
-                                                            alt="Image"
-                                                            className="h-12 w-12 rounded-xl object-cover ring-2 ring-border transition-all duration-200 group-hover:ring-primary/30 sm:h-16 sm:w-16"
-                                                        />
-                                                    </div>
-                                                ) : col.isAction ? (
-                                                    /* Actions cell */
-                                                    <ActionButtons
+                                                {col.isAction ? (
+                                                    <ActionDropdown
+                                                        {...actionProps}
                                                         row={row}
-                                                        actions={actions}
-                                                        isModal={isModal}
-                                                        onDelete={onDelete}
-                                                        onView={onView}
-                                                        onEdit={onEdit}
                                                     />
-                                                ) : col.key === 'created_at' ? (
-                                                    /* Date cell */
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(row[col.key]).toLocaleDateString('en-US', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                        })}
-                                                    </span>
-                                                ) : col.type === 'multi-values' && Array.isArray(row[col.key]) ? (
-                                                    <div className="flex flex-wrap justify-center items-center gap-1">
-                                                        {row[col.key].map((permission: any) => (
-                                                            <Badge key={permission.id} variant='outline' className="bg-primary text-white p-2">
-                                                                {permission.label || permission.name}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
                                                 ) : (
-                                                    /* Default text cell */
-                                                    <span className="text-sm text-foreground">
-                                                        {row[col.key]}
-                                                    </span>
+                                                    <CellValue col={col} row={row} />
                                                 )}
                                             </td>
                                         ))}
-                                    </tr>
-                                ))
-                            ) : (
-                                /* ── Empty state ── */
-                                <tr>
-                                    <td
-                                        colSpan={columns.length + 1}
-                                        className="py-16 text-center"
-                                    >
-                                        <div className="flex flex-col items-center gap-2">
-                                            {/* Use the Search icon from lucide as a generic empty state */}
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                                                <LucidIcons.SearchX className="h-6 w-6 text-primary/50" />
-                                            </div>
-                                            <p className="text-sm font-semibold text-muted-foreground">
-                                                No data found.
-                                            </p>
-                                            <p className="text-xs text-muted-foreground/60">
-                                                Try adjusting your filters or adding new records.
-                                            </p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                    </motion.tr>
+                                ))}
+                            </AnimatePresence>
                             )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* ── Footer row count ── */}
-                {data.length > 0 && (
-                    <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2.5">
-                        <p className="text-xs text-muted-foreground">
-                            Showing{' '}
-                            <span className="font-semibold text-foreground">{from}</span>
-                            {' '}–{' '}
-                            <span className="font-semibold text-foreground">{from + data.length - 1}</span>
+                {/* Footer with Enhanced Record Information */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-border bg-muted/30">
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                        <p className="text-[11px] font-medium text-muted-foreground">
+                            {getFooterRecordDisplayText()}
                         </p>
-                        {/* 10% accent dot indicator */}
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-black text-secondary-foreground">
-                            {data.length} records
-                        </span>
                     </div>
-                )}
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>Row {from} – {to || from + data.length - 1}</span>
+                        {totalCount !== undefined && totalCount > 0 && (
+                            <span className="px-2 py-0.5 bg-muted rounded-full">
+                                Total: {totalCount.toLocaleString()}
+                            </span>
+                        )}
+                    </div>
+                </div>
             </div>
-        </>
+        </motion.div>
     );
 };

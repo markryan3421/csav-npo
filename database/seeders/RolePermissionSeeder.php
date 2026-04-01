@@ -80,7 +80,7 @@ class RolePermissionSeeder extends Seeder
         $superAdminRole = Role::firstOrCreate(
             ['name' => 'super-admin', 'guard_name' => 'web'],
             [
-                'label'       => 'Super Administrator',
+                'label'       => 'Super Admin',
                 'description' => 'Complete system access with all permissions including role and permission management.',
                 'is_active'   => true,
             ]
@@ -89,7 +89,7 @@ class RolePermissionSeeder extends Seeder
         $adminRole = Role::firstOrCreate(
             ['name' => 'admin', 'guard_name' => 'web'],
             [
-                'label'       => 'Administrator',
+                'label'       => 'Admin',
                 'description' => 'Full system access except role and permission management.',
                 'is_active'   => true,
             ]

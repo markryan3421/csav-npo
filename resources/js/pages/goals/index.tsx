@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { CustomToast, toast } from '@/components/custom-toast';
 import {
     Table, TableBody, TableCell,
@@ -14,12 +14,18 @@ import {
     MoreHorizontalIcon, Pencil, Trash2, Target, Plus, Eye,
     TrendingUp, CheckCircle2, XCircle, Flag, Users,
     ChevronRight, BarChart3, Clock,
+    Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import GoalController from '@/actions/App/Http/Controllers/GoalController';
 import SdgController from '@/actions/App/Http/Controllers/SdgController';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { CustomTable } from '@/components/custom-table';
+import { GoalsTableConfig } from '@/config/tables/goal-table';
+import { DeleteConfirmationDialog } from '@/components/delete-user';
+import { CustomPagination } from '@/components/custom-pagination';
+import { GoalFilterBar } from '@/components/goals/goal-filter-bar';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Goal {
@@ -43,9 +49,31 @@ interface Sdg {
     description: string;
 }
 
+interface LinkProps {
+    active: boolean;
+    label: string;
+    url: string | null;
+}
+
+interface GoalPagination {
+    data: Goal[];
+    links: LinkProps;
+    from: number;
+    to: number;
+    total: number;
+}
+
+interface FilterProps {
+    search: string;
+    perPage: string;
+}
+
 interface IndexProps {
+    goals: GoalPagination;
+    filters: FilterProps;
+    totalCount: number;
+    filteredCount: number;
     selectedSdg: Sdg;
-    goals: Goal[];
     totalGoals: number;
     compliantGoals: number;
     nonCompliantGoals: number;
@@ -55,36 +83,6 @@ interface IndexProps {
 
 interface FlashProps extends Record<string, any> {
     flash?: { success?: string; error?: string; }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const fmtDate = (d?: string) =>
-    d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-
-// ── Status config ─────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { badge: string; dot: string; label: string }> = {
-    pending:     { badge: 'bg-secondary text-secondary-foreground',              dot: 'bg-secondary', label: 'Pending'     },
-    'in-progress':{ badge: 'bg-primary/10 text-primary border border-primary/20', dot: 'bg-primary',  label: 'In Progress' },
-    completed:   { badge: 'bg-primary text-primary-foreground',                  dot: 'bg-primary',   label: 'Completed'   },
-};
-
-function StatusBadge({ status }: { status: string }) {
-    const cfg = STATUS_CONFIG[status] ?? { badge: 'bg-muted text-muted-foreground', dot: 'bg-muted', label: status };
-    return (
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${cfg.badge}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-            {cfg.label}
-        </span>
-    );
-}
-
-function TypeBadge({ type }: { type: string }) {
-    return (
-        <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <Clock className="h-2.5 w-2.5" />
-            {type === 'long' ? 'Long-Term' : 'Short-Term'}
-        </span>
-    );
 }
 
 // ── Animated stat card ────────────────────────────────────────────────────────
@@ -169,7 +167,7 @@ function ComplianceRing({ compliant, total }: { compliant: number; total: number
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Index({
-    selectedSdg, goals, totalGoals, compliantGoals,
+    filters, totalCount, filteredCount, selectedSdg, goals, totalGoals, compliantGoals,
     nonCompliantGoals, sdgs, assignedGoalsCount,
 }: IndexProps) {
 
@@ -177,8 +175,9 @@ export default function Index({
         { title: selectedSdg?.name ?? 'Goals', href: '/goals' },
     ];
 
+    const { delete: destroy } = useForm();
     // Derived analytics
-    const safeGoals  = goals  ?? [];
+    const safeGoals  = goals?.data ?? [];
     const safeSdgs   = sdgs   ?? [];
     const completionPct = totalGoals > 0 ? Math.round((compliantGoals / totalGoals) * 100) : 0;
 
@@ -193,16 +192,89 @@ export default function Index({
         short: safeGoals.filter((g) => g.type === 'short').length,
     }), [safeGoals]);
 
-    const handleDelete = (goal: { slug: string }) => {
-        router.delete(GoalController.destroy({ goal: goal.slug }).url, {
-            onSuccess: (response: { props: FlashProps }) => {
-                toast.success(response.props.flash?.success || 'Goal deleted successfully.');
+    const { data, setData } = useForm({
+        search: filters.search || '',
+        perPage: filters.perPage || '10',
+    });
+
+    const handlePerPageChange = (value: string) => {
+        setData('perPage', value);
+
+        const queryString = {
+            ...(data.search && { search: data.search }),
+            ...(value && { perPage: value }),
+        };
+
+        router.get(GoalController.index.url(), queryString, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const handleSearchChange = (value: string) => {
+        setData('search', value);
+
+        const queryString = {
+            ...(value && { search: value }),
+            ...(data.perPage && { perPage: data.perPage }),
+        };
+
+        router.get(GoalController.index.url(), queryString, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const handleClearAll = () => {
+        setData('search', '');
+        setData('perPage', '10');
+
+        router.get(GoalController.index.url(), {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const handleViewClick = (goal: { slug: string }) => {
+        router.get(GoalController.show({ goal: goal.slug }).url);
+    };
+
+    const handleEditClick = (goal: { slug: string }) => {
+        router.get(GoalController.edit({ goal: goal.slug }).url);
+    };
+
+    // Delete confirmation states
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = (goal: Goal) => {
+        setItemToDelete(goal);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!itemToDelete) return;
+
+        setIsDeleting(true);
+        destroy(GoalController.destroy({ goal: itemToDelete.slug }).url, {
+            onSuccess: (page) => {
+                const successMessage = (page.props as any).flash?.success || 'Contribution version deleted successfully.';
+                toast.success(successMessage);
+                setDeleteDialogOpen(false);
+                setItemToDelete(null);
             },
-            onError: (error: Record<string, string>) => {
-                toast.error(error?.message || 'Failed to delete goal.');
+            onError: (errors) => {
+                const errorMessage = Object.values(errors).flat()[0] || 'Failed to delete contribution version.';
+                toast.error(errorMessage);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
             },
         });
     };
+
+    const hasActiveFilters = !!data.search.trim();
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -441,154 +513,78 @@ export default function Index({
                                 {safeGoals.length} goal{safeGoals.length !== 1 ? 's' : ''} in {selectedSdg?.name}
                             </p>
                         </div>
+                        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                            <div className="overflow-x-auto">
+                                <CustomTable
+                                    columns={GoalsTableConfig.columns}
+                                    actions={GoalsTableConfig.actions}
+                                    data={safeGoals}
+                                    from={goals.from}
+                                    onDelete={handleDeleteClick}
+                                    onView={handleViewClick}
+                                    onEdit={handleEditClick}
+                                    isModal={true}
+                                    title="Goals"
+                                    toolbar={
+                                        <GoalFilterBar 
+                                            filters={{
+                                                search: true,
+                                                sdg: false,
+                                                priority: false,
+                                                status: true,
+                                                date: false,
+                                            }}
+                                            searchTerm={data.search}
+                                            onSearchChange={handleSearchChange}
+                                            onClearAll={hasActiveFilters ? handleClearAll : undefined}
+                                            searchPlaceholder='Search by goal name or description...'
+                                        />
+                                    }
+                                    filterEmptyState={
+                                        hasActiveFilters && goals.data.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3">
+                                                    <Search className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+                                                </div>
+                                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                                                    No results found
+                                                </h3>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-xs">
+                                                    No goals matching "{data.search}".
+                                                </p>
+                                                <Button variant="outline" size="sm" onClick={handleClearAll}>
+                                                    Clear search
+                                                </Button>
+                                            </div>
+                                        ) : undefined
+                                    }
+                                />
 
-                        {safeGoals.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-24 text-center">
-                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                                    <Target className="h-8 w-8 text-primary/50" />
-                                </div>
-                                <p className="text-lg font-semibold text-muted-foreground">No goals yet</p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Create your first goal for <strong>{selectedSdg?.name}</strong>.
-                                </p>
-                                <Link
-                                    href={GoalController.create().url}
-                                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all hover:brightness-110 hover:shadow-lg active:scale-95"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Create First Goal
-                                </Link>
+                                <CustomPagination
+                                    pagination={goals}
+                                    perPage={data.perPage}
+                                    onPerPageChange={handlePerPageChange}
+                                    totalCount={totalCount}
+                                    filteredCount={filteredCount}
+                                    search={data.search}
+                                    resourceName='goals'
+                                />
                             </div>
-                        ) : (
-                            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="bg-primary hover:bg-primary">
-                                                <TableHead className="text-[10px] font-black uppercase tracking-wider text-primary-foreground/70">
-                                                    Goal
-                                                </TableHead>
-                                                <TableHead className="text-[10px] font-black uppercase tracking-wider text-primary-foreground/70">
-                                                    Type
-                                                </TableHead>
-                                                <TableHead className="text-[10px] font-black uppercase tracking-wider text-primary-foreground/70">
-                                                    Status
-                                                </TableHead>
-                                                <TableHead className="text-[10px] font-black uppercase tracking-wider text-primary-foreground/70">
-                                                    Progress
-                                                </TableHead>
-                                                <TableHead className="w-10" />
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {safeGoals.map((goal, index) => {
-                                                const pct = Math.min(100, Math.max(0, goal.compliance_percentage ?? 0));
-                                                return (
-                                                    <TableRow
-                                                        key={goal.id}
-                                                        className="table-row group transition-colors hover:bg-primary/5"
-                                                        style={{ animationDelay: `${300 + index * 40}ms` }}
-                                                    >
-                                                        {/* Goal title + description */}
-                                                        <TableCell className="max-w-[240px]">
-                                                            <Link href={GoalController.show({ goal: goal.slug }).url}>
-                                                                <p className="truncate font-semibold text-foreground transition-colors hover:text-primary">
-                                                                    {goal.title}
-                                                                </p>
-                                                                <p className="line-clamp-1 text-xs text-muted-foreground">
-                                                                    {goal.description}
-                                                                </p>
-                                                            </Link>
-                                                        </TableCell>
 
-                                                        <TableCell>
-                                                            <TypeBadge type={goal.type} />
-                                                        </TableCell>
-
-                                                        <TableCell>
-                                                            <StatusBadge status={goal.status} />
-                                                        </TableCell>
-
-                                                        {/* Progress mini-bar */}
-                                                        <TableCell className="min-w-[120px]">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-                                                                    <div
-                                                                        className="bar-fill h-full rounded-full bg-primary"
-                                                                        style={{
-                                                                            '--bar-w': `${pct}%`,
-                                                                        } as React.CSSProperties}
-                                                                    />
-                                                                </div>
-                                                                <span className="w-8 text-right text-[10px] font-black text-muted-foreground">
-                                                                    {pct}%
-                                                                </span>
-                                                            </div>
-                                                        </TableCell>
-
-                                                        {/* Actions */}
-                                                        <TableCell>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                                                                        aria-label="Goal actions"
-                                                                    >
-                                                                        <MoreHorizontalIcon className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end" className="w-40">
-                                                                    <DropdownMenuItem asChild>
-                                                                        <Link
-                                                                            href={GoalController.show({ goal: goal.slug }).url}
-                                                                            className="flex items-center gap-2 text-sm"
-                                                                        >
-                                                                            <Eye className="h-3.5 w-3.5 text-primary" />
-                                                                            View
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem asChild>
-                                                                        <Link
-                                                                            href={GoalController.edit({ goal: goal.slug }).url}
-                                                                            className="flex items-center gap-2 text-sm"
-                                                                        >
-                                                                            <Pencil className="h-3.5 w-3.5 text-primary" />
-                                                                            Edit
-                                                                        </Link>
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => handleDelete(goal)}
-                                                                        className="flex items-center gap-2 text-sm text-accent focus:text-accent"
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-
-                                {/* Table footer */}
-                                <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2.5">
-                                    <p className="text-xs text-muted-foreground">
-                                        {safeGoals.length} goal{safeGoals.length !== 1 ? 's' : ''} total
-                                    </p>
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-0.5 text-[10px] font-black text-secondary-foreground">
-                                        {completionPct}% complete
-                                    </span>
-                                </div>
-                            </div>
-                        )}
+                            <DeleteConfirmationDialog 
+                                isOpen={deleteDialogOpen}
+                                onClose={() => {
+                                    setDeleteDialogOpen(false);
+                                    setItemToDelete(null);
+                                }}
+                                onConfirm={confirmDelete}
+                                title='Delete Goal Item'
+                                itemName={itemToDelete?.title}
+                                isLoading={isDeleting}
+                                confirmText='Delete Goal'
+                            />
+                        </div>
                     </div>
-
                 </div>
             </div>
         </AppLayout>
