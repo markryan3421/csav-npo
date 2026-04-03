@@ -246,15 +246,24 @@ class GoalController extends Controller
         $user = Auth::user();
         $userRole = $user->getRoleNames()->first() ?? 'staff';
 
+        // First, load the goal with its assigned users
         $goal->load([
             'projectManager:id,name,avatar',
             'assignedUsers:id,name,email,avatar',
-            'goalWithSdgs:id,name',
             'tasks.taskProductivities.user',
             'tasks.taskProductivities.taskProductivityFiles',
         ]);
 
-        // Access is granted if ANY of these is true:
+        // Load SDGs and filter their users to only those assigned to this goal
+        $goal->load(['goalWithSdgs' => function ($query) use ($goal) {
+            $query->select('sdgs.id', 'sdgs.name', 'sdgs.description', 'sdgs.slug')
+                ->with(['users' => function ($q) use ($goal) {
+                    // Only load users that are assigned to this specific goal
+                    $q->whereIn('users.id', $goal->assignedUsers->pluck('id'))
+                        ->select('users.id', 'users.name', 'users.email', 'users.avatar');
+                }]);
+        }]);
+
         $isAdminOrSuperAdmin = in_array($userRole, ['super-admin', 'admin']);
         $isProjectManager    = $goal->project_manager_id === $user->id;
         $isAssigned          = $goal->assignedUsers->contains('id', $user->id);

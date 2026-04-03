@@ -1,6 +1,6 @@
 import SdgController from "@/actions/App/Http/Controllers/SdgController";
 import { CustomToast, toast } from "@/components/custom-toast";
-import { DeleteConfirmationDialog } from "@/components/delete-confirmation-modal";
+import DeleteConfirmationModal from "@/components/delete-confirmation-modal";
 import { PermissionGuard } from "@/components/permission-guard";
 import { Button } from "@/components/ui/button";
 import { injectStyles } from "@/utils/style";
@@ -232,7 +232,7 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                     ))}
                 </div>
 
-                <DeleteConfirmationDialog
+                <DeleteConfirmationModal
                     open={deleteDialogOpen}
                     onOpenChange={setDeleteDialogOpen}
                     itemName={itemToDelete?.name ?? ''}

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { LoaderCircle } from 'lucide-react';
 
-interface DeleteConfirmationDialogProps {
+interface DeleteConfirmationModalProps {
     /** Whether the dialog is open */
     open: boolean;
     /** Callback to handle open state changes (e.g., onClose) */
@@ -31,7 +31,7 @@ interface DeleteConfirmationDialogProps {
     isDeleting?: boolean;
 }
 
-export function DeleteConfirmationDialog({
+export default function DeleteConfirmationModal({
     open,
     onOpenChange,
     itemName,
@@ -41,7 +41,7 @@ export function DeleteConfirmationDialog({
     confirmText = 'Delete',
     cancelText = 'Cancel',
     isDeleting = false,
-}: DeleteConfirmationDialogProps) {
+}: DeleteConfirmationModalProps) {
     const handleConfirm = () => {
         onConfirm();
         // The dialog will close automatically after onConfirm if the parent sets open={false}

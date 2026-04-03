@@ -23,10 +23,10 @@ import SdgController from '@/actions/App/Http/Controllers/SdgController';
 import { useMemo, useState } from 'react';
 import { CustomTable } from '@/components/custom-table';
 import { GoalsTableConfig } from '@/config/tables/goal-table';
-import { DeleteConfirmationDialog } from '@/components/delete-user';
 import { CustomPagination } from '@/components/custom-pagination';
 import { GoalFilterBar } from '@/components/goals/goal-filter-bar';
 import { PermissionGuard } from '@/components/permission-guard';
+import DeleteConfirmationModal from '@/components/delete-confirmation-modal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Goal {
@@ -577,7 +577,7 @@ export default function Index({
                                 />
                             </div>
 
-                            <DeleteConfirmationDialog 
+                            <DeleteConfirmationModal
                                 isOpen={deleteDialogOpen}
                                 onClose={() => {
                                     setDeleteDialogOpen(false);

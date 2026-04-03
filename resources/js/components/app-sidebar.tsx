@@ -71,7 +71,7 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" className="border-r-1 bg-white border-gray-400">
-            <SidebarHeader className="px-5">
+            <SidebarHeader className={`${isExpanded ? 'ms-3' : 'border-b border-border/50' }`}>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -87,11 +87,9 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent className={`
-                ${isExpanded ? 'px-5' : '-ml-3 px-5 transition-all duration-200 ease-in-out'}`}
+                ${isExpanded ? 'px-5' : 'me-1 transition-all duration-200 ease-in-out'}`}
             >
                 <NavMain items={filterNavItems} label="Goals" />
-                {/* <NavMain items={AccessControlItems} label="Access Control" /> */}
-                {/* <NavMain items={AttendanceItems} label="Attendance" /> */}
             </SidebarContent>
 
             <SidebarFooter>

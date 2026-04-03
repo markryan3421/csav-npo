@@ -11,7 +11,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
             headerActions={<NotificationBell />}  
             {...props}
         >
-            {children}  {/* Only children should be here */}
+            {children}
         </AppLayoutTemplate>
     </>
 );
