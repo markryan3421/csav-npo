@@ -10,6 +10,8 @@ import {
 import { Button } from "./ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { usePage } from "@inertiajs/react";
+import { hasPermission } from "@/utils/authorization";
 
 // ─── Brand tokens (60-30-10) ──────────────────────────────────────────────────
 // 60% → Deep Forest Green (primary)    — header, index badges, primary actions
@@ -32,6 +34,7 @@ interface ActionConfig {
     icon: keyof typeof LucidIcons;
     route: string;
     className?: string;
+    permission?: string;
 }
 
 interface TableRow {
@@ -189,6 +192,9 @@ function ActionDropdown({
     onEdit: (r: TableRow) => void;
     route: ReturnType<typeof useRoute>;
 }) {
+    const { auth } = usePage().props as any;
+    const permissions = auth.permissions;
+
     const nonDestructive = actions.filter(a => a.label !== "Delete");
     const destructive = actions.filter(a => a.label === "Delete");
 
@@ -231,6 +237,11 @@ function ActionDropdown({
                     className="min-w-[160px] rounded-xl border border-border bg-card shadow-xl p-1"
                 >
                     {nonDestructive.map((action, i) => {
+                        // Check permission before rendering
+                        if (action.permission && !hasPermission(permissions, action.permission)) {
+                            return null;
+                        }
+                        
                         const Icon = LucidIcons[action.icon] as React.ElementType;
                         return (
                             <DropdownMenuItem
@@ -248,6 +259,11 @@ function ActionDropdown({
                         <DropdownMenuSeparator className="my-1 border-border" />
                     )}
                     {destructive.map((action, i) => {
+                        // Check permission before rendering
+                        if (action.permission && !hasPermission(permissions, action.permission)) {
+                            return null;
+                        }
+                        
                         const Icon = LucidIcons[action.icon] as React.ElementType;
                         return (
                             <DropdownMenuItem

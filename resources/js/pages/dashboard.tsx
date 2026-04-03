@@ -1,6 +1,7 @@
 import SdgController from "@/actions/App/Http/Controllers/SdgController";
 import { CustomToast, toast } from "@/components/custom-toast";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-modal";
+import { PermissionGuard } from "@/components/permission-guard";
 import { Button } from "@/components/ui/button";
 import { injectStyles } from "@/utils/style";
 import { Link, router } from "@inertiajs/react";
@@ -78,7 +79,6 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
                 )}
             </div>
 
-            {/* Content (same as before) */}
             <div className="flex flex-1 flex-col p-5">
                 <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-accent">
                     Goal {sdg.id}
@@ -106,28 +106,32 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
                         Explore <span className="ms-2">&rarr;</span>
                     </Link>
 
-                    <Link
-                        as="button"
-                        className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-all duration-200
-                                   active:scale-95 hover:brightness-110 hover:shadow-md
-                                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                        href={SdgController.edit(sdg.slug)}
-                        aria-label={`Edit ${sdg.name}`}
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Link>
+                    <PermissionGuard permission="edit sdg">
+                        <Link
+                            as="button"
+                            className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-all duration-200
+                                    active:scale-95 hover:brightness-110 hover:shadow-md
+                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                            href={SdgController.edit(sdg.slug)}
+                            aria-label={`Edit ${sdg.name}`}
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Link>
+                    </PermissionGuard>
 
-                    <Button
-                        className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground transition-all duration-200
-                                   active:scale-95 hover:brightness-110 hover:shadow-md
-                                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(sdg)}
-                        aria-label={`Delete ${sdg.name}`}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="delete sdg">
+                        <Button
+                            className="sdg-btn-shimmer inline-flex items-center justify-center rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground transition-all duration-200
+                                    active:scale-95 hover:brightness-110 hover:shadow-md
+                                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onDelete(sdg)}
+                            aria-label={`Delete ${sdg.name}`}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </PermissionGuard>
                 </div>
             </div>
         </article>
@@ -192,15 +196,17 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                             </span>
                             goals configured
                         </p>
-                        <Link
-                            as="button"
-                            className="add-goal-btn sdg-btn-shimmer inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
-                                       active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                            href={SdgController.create().url}
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Goal
-                        </Link>
+                        <PermissionGuard permission="create sdg" fallback={null}>
+                            <Link
+                                as="button"
+                                className="add-goal-btn sdg-btn-shimmer inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
+                                        active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                                href={SdgController.create().url}
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Goal
+                            </Link>
+                        </PermissionGuard>
                     </div>
                 </div>
 

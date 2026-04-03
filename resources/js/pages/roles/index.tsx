@@ -7,10 +7,9 @@ import { CustomModalForm } from '@/components/custom-modal-form';
 import { useForm } from '@inertiajs/react';
 import React from 'react';
 import { CustomToast, toast } from '@/components/custom-toast';
-import { RolesTableConfig } from '@/config/tables/roles-table';
-import PermissionController from '@/actions/App/Http/Controllers/PermissionController';
 import RoleController from '@/actions/App/Http/Controllers/RoleController';
 import { RolesModalFormConfig } from '@/config/forms/roles-modal-form';
+import { RolesTableConfig } from '@/config/tables/roles-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -75,6 +74,7 @@ interface IndexProps {
 }
 
 export default function Index({ roles, permissions }: IndexProps) {
+    console.log("Role data", roles.data);
 
     // This will display flash message from the backend (success/error)
     const [modalOpen, setModalOpen] = React.useState(false);

@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { CustomToast, toast } from '@/components/custom-toast';
 import {
     Table, TableBody, TableCell,
@@ -26,6 +26,7 @@ import { GoalsTableConfig } from '@/config/tables/goal-table';
 import { DeleteConfirmationDialog } from '@/components/delete-user';
 import { CustomPagination } from '@/components/custom-pagination';
 import { GoalFilterBar } from '@/components/goals/goal-filter-bar';
+import { PermissionGuard } from '@/components/permission-guard';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Goal {
@@ -276,6 +277,9 @@ export default function Index({
 
     const hasActiveFilters = !!data.search.trim();
 
+    const { auth } = usePage().props as any;
+    const permissions = auth.permissions;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${selectedSdg?.name ?? 'Goals'} — Dashboard`} />
@@ -332,16 +336,18 @@ export default function Index({
                             </div>
                         </div>
 
-                        <Link
-                            as="button"
-                            href={GoalController.create().url}
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
-                                       active:scale-95 hover:brightness-110 hover:shadow-lg
-                                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Create Goal
-                        </Link>
+                        <PermissionGuard permission="create goal" fallback={null}>
+                            <Link
+                                as="button"
+                                href={GoalController.create().url}
+                                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
+                                        active:scale-95 hover:brightness-110 hover:shadow-lg
+                                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Create Goal
+                            </Link>
+                        </PermissionGuard>
                     </div>
 
                     {/* ── Stat cards: 2 col mobile → 4 col desktop ── */}

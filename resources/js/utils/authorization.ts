@@ -1,7 +1,7 @@
 export const hasRole = (role: string, userRoles: string[] = []) => {
-    userRoles.includes(role);
+    return userRoles.includes(role);
 }
 
-export const hasPermission = (permission: string[], userPermissions: string) => {
-    permission.includes(userPermissions);
+export const hasPermission = (userPermissions: string[], permission: string) => {
+    return userPermissions.includes(permission);
 }
