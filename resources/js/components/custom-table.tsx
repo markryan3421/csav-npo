@@ -489,13 +489,13 @@ export const CustomTable = ({
                     <table className="w-full border-collapse text-[13px]">
                         <thead>
                             <tr className="border-b border-border bg-muted/50">
-                                <th className="w-14 px-5 py-3 text-center text-[10px] font-black tracking-widest uppercase text-primary whitespace-nowrap">
+                                <th className="w-14 px-5 py-3 text-center text-[10px] font-bold tracking-widest uppercase text-primary whitespace-nowrap">
                                     #
                                 </th>
                                 {columns.map(col => (
                                     <th
                                         key={col.key}
-                                        className={`px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase whitespace-nowrap text-muted-foreground ${col.className ?? ""}`}
+                                        className={`px-4 py-3 text-left text-[11px] font-bold tracking-widest uppercase whitespace-nowrap text-primary ${col.className ?? ""}`}
                                     >
                                         {col.label}
                                     </th>

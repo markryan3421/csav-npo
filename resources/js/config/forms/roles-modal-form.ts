@@ -7,7 +7,7 @@ export const RolesModalFormConfig = {
     addButton: {
         id: 'add-role',
         label: 'Add Role',
-        className: 'bg-primary hover:bg-chart-4 cursor-pointer',
+        className: 'cursor-pointer',
         icon: CirclePlus,
         type: 'button',
         variant: 'default',

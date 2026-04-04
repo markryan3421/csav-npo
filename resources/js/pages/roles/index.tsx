@@ -10,6 +10,8 @@ import { CustomToast, toast } from '@/components/custom-toast';
 import RoleController from '@/actions/App/Http/Controllers/RoleController';
 import { RolesModalFormConfig } from '@/config/forms/roles-modal-form';
 import { RolesTableConfig } from '@/config/tables/roles-table';
+import { CustomHeader } from '@/components/custom-header';
+import { Shield, ShieldHalf, Users } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -188,7 +190,29 @@ export default function Index({ roles, permissions }: IndexProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Category Management" />
             <CustomToast />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+            <div className="min-h-screen py-8 md:py-12">
+                <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+                {/* ── Header ── */}
+                <div className="page-header mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg">
+                            <Shield className="h-6 w-6 text-primary-foreground" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                Management
+                            </p>
+                            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+                                List of{' '}
+                                <span className="relative inline-block text-primary">
+                                    Roles
+                                    <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-secondary" />
+                                </span>
+                            </h1>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Custom Modal Form */}
                 <div className="ml-auto">
                     <CustomModalForm
@@ -219,6 +243,8 @@ export default function Index({ roles, permissions }: IndexProps) {
                     onEdit={(category) => openModal('edit', category)}
                     isModal={true}
                 />
+                </div>
+                
             </div>
         </AppLayout>
     );

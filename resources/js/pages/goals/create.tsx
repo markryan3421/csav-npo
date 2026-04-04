@@ -130,78 +130,148 @@ function SdgSelector({ sdgs, selectedSdgs, onToggle, disabled }: {
     );
 }
 
-// ── Collapsible User Section Component ──────────────────────────────────────
-function CollapsibleUserSection({ sdgName, sdgId, users, selectedUsers, onToggleUser, disabled }: {
-    sdgName: string;
-    sdgId: number;
+// ── User List Component for Tab Content ─────────────────────────────────────
+function UserList({ users, selectedUsers, onToggleUser, disabled }: {
     users: User[];
     selectedUsers: number[];
     onToggleUser: (userId: number, checked: boolean) => void;
     disabled: boolean;
 }) {
-    const [isOpen, setIsOpen] = useState(true);
-    const selectedCount = users.filter(u => selectedUsers.includes(u.id)).length;
-
-    if (users.length === 0) return null;
+    if (users.length === 0) {
+        return (
+            <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">No members available for this SDG.</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="rounded-xl border border-border overflow-hidden">
-            <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex w-full items-center justify-between bg-muted/30 px-4 py-3 hover:bg-muted/50 transition-colors"
-            >
-                <div className="flex items-center gap-2">
-                    {isOpen ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="font-semibold text-foreground">{sdgName}</span>
-                    {selectedCount > 0 && (
-                        <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {selectedCount} selected
-                        </span>
-                    )}
+        <div className="divide-y divide-border">
+            {users.map((user) => {
+                const checked = selectedUsers.includes(user.id);
+                return (
+                    <label
+                        key={user.id}
+                        className={`flex cursor-pointer items-center gap-3 p-3 transition-all duration-150 hover:bg-muted/30
+                            ${checked ? 'bg-primary/5' : ''}`}
+                    >
+                        <Checkbox
+                            checked={checked}
+                            onCheckedChange={(c) => onToggleUser(user.id, !!c)}
+                            disabled={disabled}
+                            className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                        />
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">
+                                {user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                            </div>
+                        </div>
+                        {checked && (
+                            <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-secondary-foreground">
+                                Selected
+                            </span>
+                        )}
+                    </label>
+                );
+            })}
+        </div>
+    );
+}
+
+// ── Tab Component for SDG Selection ─────────────────────────────────────────
+function SdgTabs({ sdgs, selectedSdgs, activeTab, setActiveTab, disabled, onToggleUser, selectedUsers, usersBySdg }: {
+    sdgs: Sdg[];
+    selectedSdgs: number[];
+    activeTab: number | null;
+    setActiveTab: (id: number) => void;
+    disabled: boolean;
+    onToggleUser: (userId: number, checked: boolean) => void;
+    selectedUsers: number[];
+    usersBySdg: Record<number, User[]>;
+}) {
+    const availableSdgs = sdgs.filter(sdg => selectedSdgs.includes(sdg.id));
+
+    if (availableSdgs.length === 0) {
+        return (
+            <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                    Select at least one SDG to see available team members.
+                </p>
+            </div>
+        );
+    }
+
+    // Set first SDG as active tab if none selected
+    if (activeTab === null && availableSdgs.length > 0) {
+        setTimeout(() => setActiveTab(availableSdgs[0].id), 0);
+    }
+
+    return (
+        <div>
+            {/* Tab Navigation */}
+            <div className="border-b border-border">
+                <div className="flex flex-wrap gap-1">
+                    {availableSdgs.map((sdg) => (
+                        <button
+                            key={sdg.id}
+                            type="button"
+                            onClick={() => setActiveTab(sdg.id)}
+                            className={`
+                                relative inline-flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all
+                                ${activeTab === sdg.id 
+                                    ? 'bg-primary/10 text-primary shadow-sm' 
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                }
+                            `}
+                        >
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs font-black text-primary">
+                                {sdg.id}
+                            </div>
+                            <span className="hidden sm:inline">{sdg.name.length > 20 ? sdg.name.substring(0, 20) + '...' : sdg.name}</span>
+                            <span className="sm:hidden">SDG {sdg.id}</span>
+                            {usersBySdg[sdg.id] && usersBySdg[sdg.id].filter(u => selectedUsers.includes(u.id)).length > 0 && (
+                                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-black text-primary-foreground">
+                                    {usersBySdg[sdg.id].filter(u => selectedUsers.includes(u.id)).length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
                 </div>
-                <span className="text-xs text-muted-foreground">{users.length} members</span>
-            </button>
-            
-            {isOpen && (
-                <div className="divide-y divide-border">
-                    {users.map((user) => {
-                        const checked = selectedUsers.includes(user.id);
-                        return (
-                            <label
-                                key={user.id}
-                                className={`flex cursor-pointer items-center gap-3 p-3 transition-all duration-150 hover:bg-muted/30
-                                    ${checked ? 'bg-primary/5' : ''}`}
-                            >
-                                <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(c) => onToggleUser(user.id, !!c)}
-                                    disabled={disabled}
-                                    className="data-[state=checked]:border-primary data-[state=checked]:bg-primary"
-                                />
-                                <div className="flex min-w-0 flex-1 items-center gap-3">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">
-                                        {user.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
-                                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                                    </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="mt-4 max-h-[400px] overflow-y-auto">
+                {availableSdgs.map((sdg) => (
+                    <div
+                        key={sdg.id}
+                        className={`transition-all duration-300 ${activeTab === sdg.id ? 'block' : 'hidden'}`}
+                    >
+                        <div className="mb-3 rounded-lg bg-primary/5 p-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">{sdg.name}</p>
+                                    {sdg.description && (
+                                        <p className="text-xs text-muted-foreground">{sdg.description}</p>
+                                    )}
                                 </div>
-                                {checked && (
-                                    <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-secondary-foreground">
-                                        Selected
-                                    </span>
-                                )}
-                            </label>
-                        );
-                    })}
-                </div>
-            )}
+                                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-black text-primary-foreground">
+                                    SDG {sdg.id}
+                                </span>
+                            </div>
+                        </div>
+                        <UserList
+                            users={usersBySdg[sdg.id] || []}
+                            selectedUsers={selectedUsers}
+                            onToggleUser={onToggleUser}
+                            disabled={disabled}
+                        />
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -229,6 +299,7 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
     const [endTime, setEndTime] = useState('17:00');
     const [startOpen, setStartOpen] = useState(false);
     const [endOpen, setEndOpen] = useState(false);
+    const [activeSdgTab, setActiveSdgTab] = useState<number | null>(null);
 
     // Get all users from selected SDGs, grouped by SDG
     const availableUsersBySdg = useMemo(() => {
@@ -254,7 +325,12 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
         if (currentAssignedUsers.length !== data.assigned_users.length) {
             setData('assigned_users', currentAssignedUsers);
         }
-    }, [allAvailableUsers]);
+        
+        // Reset active tab if current tab is no longer selected
+        if (activeSdgTab !== null && !data.sdg_ids.includes(activeSdgTab)) {
+            setActiveSdgTab(null);
+        }
+    }, [allAvailableUsers, data.sdg_ids, activeSdgTab]);
 
     useEffect(() => {
         if (startDate) {
@@ -309,6 +385,7 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
                 reset();
                 setStartDate(undefined);
                 setEndDate(undefined);
+                setActiveSdgTab(null);
             },
             onError: () => { 
                 toast.error('Please fix the errors below.'); 
@@ -408,7 +485,7 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
                             </div>
                         </FormSection>
 
-                        {/* 2. SDG Association - NEW */}
+                        {/* 2. SDG Association */}
                         <FormSection icon={Globe} title="SDG Association" index={1}>
                             <SdgSelector
                                 sdgs={allSdgs}
@@ -483,35 +560,34 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
                             </div>
                         </FormSection>
 
-                        {/* 4. Team Assignment - NEW: Grouped by SDG */}
+                        {/* 4. Team Assignment - Tab View */}
                         <FormSection icon={Users} title="Assign Team Members" index={3}>
-                            {Object.keys(availableUsersBySdg).length === 0 ? (
-                                <p className="py-2 text-sm text-muted-foreground">
-                                    Select at least one SDG to see available team members.
-                                </p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {Object.entries(availableUsersBySdg).map(([sdgId, users]) => {
-                                        const sdg = allSdgs.find(s => s.id === parseInt(sdgId));
-                                        return (
-                                            <CollapsibleUserSection
-                                                key={sdgId}
-                                                sdgName={sdg?.name || `SDG ${sdgId}`}
-                                                sdgId={parseInt(sdgId)}
-                                                users={users}
-                                                selectedUsers={data.assigned_users}
-                                                onToggleUser={toggleUser}
-                                                disabled={processing}
-                                            />
-                                        );
-                                    })}
-                                    {allAvailableUsers.length > 0 && (
-                                        <div className="mt-3 pt-2 text-right">
-                                            <span className="text-xs text-muted-foreground">
-                                                {data.assigned_users.length} of {allAvailableUsers.length} members selected
-                                            </span>
-                                        </div>
-                                    )}
+                            <SdgTabs
+                                sdgs={allSdgs}
+                                selectedSdgs={data.sdg_ids}
+                                activeTab={activeSdgTab}
+                                setActiveTab={setActiveSdgTab}
+                                disabled={processing}
+                                onToggleUser={toggleUser}
+                                selectedUsers={data.assigned_users}
+                                usersBySdg={usersBySdg}
+                            />
+                            {Object.keys(availableUsersBySdg).length > 0 && (
+                                <div className="mt-4 border-t border-border pt-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-muted-foreground">
+                                            {data.assigned_users.length} of {allAvailableUsers.length} members selected
+                                        </span>
+                                        {data.assigned_users.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('assigned_users', [])}
+                                                className="text-xs text-accent hover:text-accent/80 transition-colors"
+                                            >
+                                                Clear all
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                             <InputError message={errors.assigned_users as string} />

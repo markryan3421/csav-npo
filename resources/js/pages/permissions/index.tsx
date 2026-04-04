@@ -10,6 +10,8 @@ import { CustomModalForm } from '@/components/custom-modal-form';
 import { PermissionModalFormConfig } from '@/config/forms/permission-modal-form';
 import { PermissionsTableConfig } from '@/config/tables/permission-table';
 import { CustomTable } from '@/components/custom-table';
+import { CustomHeader } from '@/components/custom-header';
+import { Lock, ShieldCheck } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -175,36 +177,59 @@ export default function Index({ permissions }: IndexProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Category Management" />
             <CustomToast />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                {/* Custom Modal Form */}
-                <div className="ml-auto">
-                    <CustomModalForm
-                        addButton={PermissionModalFormConfig.addButton}
-                        title={mode === 'view' ? 'View Permission' : (mode === 'edit' ? 'Update Permission' : PermissionModalFormConfig.title)}
-                        description={PermissionModalFormConfig.description}
-                        fields={PermissionModalFormConfig.fields}
-                        buttons={PermissionModalFormConfig.buttons}
-                        data={data}
-                        setData={setData}
-                        errors={errors}
-                        processing={processing}
-                        handleSubmit={handleSubmit}
-                        open={modalOpen}
-                        onOpenChange={handleModalToggle}
-                        mode={mode}
+            <div className="min-h-screen py-8 md:py-12">
+                <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+                    {/* ── Header ── */}
+                    <div className="page-header mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg">
+                                <Lock className="h-6 w-6 text-primary-foreground" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                    Management
+                                </p>
+                                <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+                                    List of{' '}
+                                    <span className="relative inline-block text-primary">
+                                        Permissions
+                                        <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-secondary" />
+                                    </span>
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Custom Modal Form */}
+                    <div className="ml-auto">
+                        <CustomModalForm
+                            addButton={PermissionModalFormConfig.addButton}
+                            title={mode === 'view' ? 'View Permission' : (mode === 'edit' ? 'Update Permission' : PermissionModalFormConfig.title)}
+                            description={PermissionModalFormConfig.description}
+                            fields={PermissionModalFormConfig.fields}
+                            buttons={PermissionModalFormConfig.buttons}
+                            data={data}
+                            setData={setData}
+                            errors={errors}
+                            processing={processing}
+                            handleSubmit={handleSubmit}
+                            open={modalOpen}
+                            onOpenChange={handleModalToggle}
+                            mode={mode}
+                        />
+                    </div>
+
+                    <CustomTable
+                        columns={PermissionsTableConfig.columns}
+                        actions={PermissionsTableConfig.actions}
+                        data={permissions.data}
+                        from={permissions.from}
+                        onDelete={handleDelete}
+                        onView={(category) => openModal('view', category)}
+                        onEdit={(category) => openModal('edit', category)}
+                        isModal={true}
                     />
                 </div>
-
-                <CustomTable
-                    columns={PermissionsTableConfig.columns}
-                    actions={PermissionsTableConfig.actions}
-                    data={permissions.data}
-                    from={permissions.from}
-                    onDelete={handleDelete}
-                    onView={(category) => openModal('view', category)}
-                    onEdit={(category) => openModal('edit', category)}
-                    isModal={true}
-                />
             </div>
         </AppLayout>
     );

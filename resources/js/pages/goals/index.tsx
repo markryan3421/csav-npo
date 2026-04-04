@@ -15,6 +15,7 @@ import {
     TrendingUp, CheckCircle2, XCircle, Flag, Users,
     ChevronRight, BarChart3, Clock,
     Search,
+    Landmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -320,7 +321,7 @@ export default function Index({
                     <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div className="flex items-center gap-4">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-lg">
-                                <Target className="h-6 w-6 text-primary-foreground" />
+                                <Landmark className="h-6 w-6 text-primary-foreground" />
                             </div>
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">

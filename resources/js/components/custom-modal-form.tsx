@@ -121,9 +121,11 @@ export const CustomModalForm = ({
         <Dialog open={open} onOpenChange={onOpenChange} modal>
             {/* {addButton.permission && hasPermission(permissions, addButton.permission) && ( */}
             <DialogTrigger asChild>
-                <Button type={addButton.type} id={addButton.id} variant={addButton.variant} className={addButton.className}>
-                    {addButton.icon && <addButton.icon />} {addButton.label}
-                </Button>
+                <div className="grid grid-flow-col justify-items-end-safe mb-3">
+                    <Button type={addButton.type} id={addButton.id} variant={addButton.variant} className={addButton.className}>
+                        {addButton.icon && <addButton.icon />} {addButton.label}
+                    </Button>
+                </div>
             </DialogTrigger>
             {/* )} */}
 

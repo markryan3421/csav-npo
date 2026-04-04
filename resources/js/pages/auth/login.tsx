@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
@@ -23,7 +23,7 @@ export default function Login({
     canRegister,
 }: LoginProps) {
     return (
-        <AuthLayout
+        <AuthSplitLayout
             title="Log in to your account"
             description="Enter your email and password below to log in"
         >
@@ -115,6 +115,6 @@ export default function Login({
                     {status}
                 </div>
             )}
-        </AuthLayout>
+        </AuthSplitLayout>
     );
 }
