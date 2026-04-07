@@ -22,7 +22,7 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
     onDelete: (sdg: { id: number; slug: string; name: string }) => void;
 }) {
     injectStyles();
-    
+
     // Check if image exists and is valid
     const [imgError, setImgError] = useState(false);
     const imageUrl = sdg.cover_photo && !imgError ? sdg.cover_photo : null;
@@ -81,7 +81,7 @@ function SDGCard({ sdg, index, featured = false, onDelete }: {
 
             <div className="flex flex-1 flex-col p-5">
                 <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-accent">
-                    Goal {sdg.id}
+                    Compliance {sdg.id}
                 </p>
 
                 <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-card-foreground">
@@ -176,15 +176,15 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                         </div>
                         <div>
                             <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
-                                United Nations
+                                Colegio de Sta. Ana de Victorias
                             </p>
                             <h2 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-                                Sustainable{' '}
+                                Compliance{' '}
                                 <span className="relative inline-block text-primary">
-                                    Development
+                                    Monitoring
                                     <span className="absolute -bottom-1 left-0 h-[3px] w-full rounded-full bg-secondary" />
                                 </span>{' '}
-                                Goals
+                                Tool
                             </h2>
                         </div>
                     </div>
@@ -199,12 +199,12 @@ export default function SDGGrid({ sdgs = [] }: { sdgs: any[] }) {
                         <PermissionGuard permission="create sdg" fallback={null}>
                             <Link
                                 as="button"
-                                className="add-goal-btn sdg-btn-shimmer inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
+                                className="add-goal-btn sdg-btn-shimmer inline-flex items-center -2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-all duration-200
                                         active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                                 href={SdgController.create().url}
                             >
                                 <Plus className="h-4 w-4" />
-                                Add Goal
+                                Add Compliant Goal
                             </Link>
                         </PermissionGuard>
                     </div>

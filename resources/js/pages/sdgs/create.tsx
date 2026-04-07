@@ -147,7 +147,7 @@ export default function CreateSdg() {
                                     className="flex items-center gap-1 text-sm font-semibold text-foreground"
                                 >
                                     <span style={{ color: "#eb3d00" }}>*</span>
-                                    SDG Name
+                                    Compliance Area
                                 </Label>
                                 <Input
                                     id="name"
