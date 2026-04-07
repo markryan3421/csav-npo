@@ -8,6 +8,7 @@ import { LoaderCircle, Clock, ArrowLeft, AlertCircle, FileText, Upload, Trash2 }
 import { useState, useRef, DragEvent } from 'react';
 import InputError from '@/components/input-error';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
+import { toast } from 'sonner';
 
 interface Task {
     id: number; slug: string; title: string; description: string;
@@ -15,9 +16,9 @@ interface Task {
     goal?: { slug: string; title: string; };
 }
 
-const ALLOWED = ['doc','docx','pdf','xls','xlsx','ppt','pptx','txt','zip','rar','jpg','jpeg','png','gif'];
-const ACCEPT  = '.doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.jpg,.jpeg,.png,.gif';
-const MAX_MB  = 10;
+const ALLOWED = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', 'jpg', 'jpeg', 'png', 'gif'];
+const ACCEPT = '.doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.jpg,.jpeg,.png,.gif';
+const MAX_MB = 10;
 
 function validateFile(f: File): boolean {
     const ext = f.name.split('.').pop()?.toLowerCase();
@@ -51,9 +52,9 @@ function DropZone({ files, onChange, disabled }: {
         onChange([...files, ...Array.from(list).filter(validateFile)]);
     };
     const remove = (i: number) => { const n = [...files]; n.splice(i, 1); onChange(n); };
-    const onDragOver  = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(true);  };
+    const onDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(true); };
     const onDragLeave = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); };
-    const onDrop      = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); };
+    const onDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); };
 
     return (
         <div className="space-y-3">
@@ -76,11 +77,11 @@ function DropZone({ files, onChange, disabled }: {
                     <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
                         {files.map((f, i) => {
                             const ext = f.name.split('.').pop()?.toLowerCase();
-                            const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext ?? '');
+                            const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext ?? '');
                             return (
                                 <div key={i} className="group flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3 transition-all hover:border-primary/40 hover:bg-primary/5">
                                     {isImg ? <img src={URL.createObjectURL(f)} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
-                                           : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10"><FileText className="h-4 w-4 text-primary" /></div>}
+                                        : <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10"><FileText className="h-4 w-4 text-primary" /></div>}
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-medium text-foreground">{f.name}</p>
                                         <p className="text-xs text-muted-foreground">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -110,7 +111,11 @@ export default function LateResubmit({ task }: { task: Task }) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(TaskProductivityController.storeLateResubmit(task.slug).url, { forceFormData: true });
+        put(TaskProductivityController.storeLateResubmit(task.slug).url, {
+            forceFormData: true,
+            onSuccess: () => toast.success('Late resubmit file submitted successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        });
     };
 
     const breadcrumbs: BreadcrumbItem[] = [

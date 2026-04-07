@@ -23,9 +23,13 @@ export const PermissionModalFormConfig = {
             tabIndex: 1,
             autoFocus: true,
             options: [
-                { label: 'Goals', value: 'goals', key: 'goals' },
-                { label: 'Requirements', value: 'requirements', key: 'requirements' },
-                { label: 'Reports', value: 'reports', key: 'reports' },
+                { label: 'Users', value: 'users', key: 'user' },
+                { label: 'Roles', value: 'roles', key: 'role' },
+                { label: 'SDGs', value: 'sdgs', key: 'sdg' },
+                { label: 'Goals', value: 'goals', key: 'goal' },
+                { label: 'Tasks', value: 'tasks', key: 'task' },
+                { label: 'Permissions', value: 'permissions', key: 'permission' },
+                { label: 'Productivities', value: 'productivities', key: 'productivity' },
             ],
         },
         {

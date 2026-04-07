@@ -11,6 +11,7 @@ import { format, isBefore, isAfter, startOfDay } from 'date-fns';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { CustomTextarea } from '@/components/ui/custom-textarea';
+import { toast } from 'sonner';
 
 interface Goal { id: number; slug: string; title: string; end_date: string; }
 interface CreateTaskProps { goal: Goal; }
@@ -37,10 +38,10 @@ export default function Create({ goal }: CreateTaskProps) {
         title: '', description: '', deadline: '',
     });
 
-    const [date, setDate]   = useState<Date | undefined>();
-    const [open, setOpen]   = useState(false);
+    const [date, setDate] = useState<Date | undefined>();
+    const [open, setOpen] = useState(false);
 
-    const today   = startOfDay(new Date());
+    const today = startOfDay(new Date());
     const goalEnd = new Date(goal.end_date);
     const daysLeft = Math.max(0, Math.ceil((goalEnd.getTime() - new Date().getTime()) / 86400000));
 
@@ -54,7 +55,10 @@ export default function Create({ goal }: CreateTaskProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(`/goals/${goal.slug}/tasks`);
+        post(`/goals/${goal.slug}/tasks`, {
+            onSuccess: () => toast.success('Goal updated successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        });
     };
 
     const breadcrumbs: BreadcrumbItem[] = [

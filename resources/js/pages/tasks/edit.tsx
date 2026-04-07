@@ -16,6 +16,7 @@ import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { CustomTextarea } from '@/components/ui/custom-textarea';
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
+import { toast } from 'sonner';
 
 interface Goal {
     id: number;
@@ -65,6 +66,8 @@ export default function Edit({ goal, task }: EditTaskProps) {
         e.preventDefault();
         put(TaskController.update({ goal: goal.slug, task: task.slug }).url, {
             preserveScroll: true,
+            onSuccess: () => toast.success('Goal updated successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
         });
     };
 

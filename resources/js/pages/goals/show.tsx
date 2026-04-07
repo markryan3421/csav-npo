@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import {
     ArrowLeft, Target, Flag, Users, CalendarDays, TrendingUp,
@@ -26,6 +26,8 @@ import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProdu
 import TaskController from '@/actions/App/Http/Controllers/TaskController';
 import { useTaskHighlight } from '@/hooks/use-task-highlight';
 import { PermissionGuard } from '@/components/permission-guard';
+import { CustomToast, toast } from '@/components/custom-toast';
+import DeleteConfirmationDialog from '@/components/delete-user';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface TaskProductivityFile { id: number; file_name: string; file_path: string; }
@@ -39,6 +41,7 @@ interface TaskProductivity {
 }
 interface Task {
     id: number; slug: string; title: string; description: string;
+    task: string;
     deadline: string | null; status: string; created_at: string;
     task_productivities?: TaskProductivity[];
 }
@@ -68,9 +71,9 @@ const fmtFull = (d: string) =>
 function deadlineInfo(dl: string | null): { label: string; color: string } {
     if (!dl) return { label: 'No deadline', color: 'text-muted-foreground' };
     const diff = Math.floor((new Date(dl).getTime() - Date.now()) / 86400000);
-    if (diff > 1)  return { label: `${diff}d left`,  color: 'text-green-600 dark:text-green-400' };
-    if (diff === 1) return { label: '1 day left',     color: 'text-yellow-600 dark:text-yellow-400' };
-    if (diff === 0) return { label: 'Due today',      color: 'text-orange-500' };
+    if (diff > 1) return { label: `${diff}d left`, color: 'text-green-600 dark:text-green-400' };
+    if (diff === 1) return { label: '1 day left', color: 'text-yellow-600 dark:text-yellow-400' };
+    if (diff === 0) return { label: 'Due today', color: 'text-orange-500' };
     return { label: 'Overdue', color: 'text-accent' };
 }
 
@@ -86,14 +89,14 @@ function durationLabel(start: string, end: string): string {
 
 // ── Badge configs ─────────────────────────────────────────────────────────────
 const TASK_STATUS_CONFIG: Record<string, { label: string; badge: string }> = {
-    pending:               { label: 'Pending',               badge: 'bg-secondary text-secondary-foreground'              },
-    approved:              { label: 'Approved',              badge: 'bg-primary/10 text-primary border border-primary/20' },
-    completed:             { label: 'Approved',              badge: 'bg-primary/10 text-primary border border-primary/20' },
-    rejected:              { label: 'Rejected',              badge: 'bg-accent/10 text-accent border border-accent/20'    },
-    resubmission_requested:{ label: 'Resubmission Req.',     badge: 'bg-primary/10 text-primary border border-primary/20' },
-    approved_resubmission: { label: 'Resubmission OK',       badge: 'bg-primary/10 text-primary border border-primary/20' },
-    rejected_resubmission: { label: 'Resubmission Rejected', badge: 'bg-accent/10 text-accent border border-accent/20'    },
-    completed_late:        { label: 'Completed (Late)',       badge: 'bg-secondary text-secondary-foreground'              },
+    pending: { label: 'Pending', badge: 'bg-secondary text-secondary-foreground' },
+    approved: { label: 'Approved', badge: 'bg-primary/10 text-primary border border-primary/20' },
+    completed: { label: 'Approved', badge: 'bg-primary/10 text-primary border border-primary/20' },
+    rejected: { label: 'Rejected', badge: 'bg-accent/10 text-accent border border-accent/20' },
+    resubmission_requested: { label: 'Resubmission Req.', badge: 'bg-primary/10 text-primary border border-primary/20' },
+    approved_resubmission: { label: 'Resubmission OK', badge: 'bg-primary/10 text-primary border border-primary/20' },
+    rejected_resubmission: { label: 'Resubmission Rejected', badge: 'bg-accent/10 text-accent border border-accent/20' },
+    completed_late: { label: 'Completed (Late)', badge: 'bg-secondary text-secondary-foreground' },
 };
 
 function TaskStatusBadge({ status }: { status: string }) {
@@ -103,9 +106,9 @@ function TaskStatusBadge({ status }: { status: string }) {
 
 function GoalStatusBadge({ status }: { status: string }) {
     const map: Record<string, string> = {
-        pending:      'bg-secondary text-secondary-foreground',
-        'in-progress':'bg-primary/10 text-primary border border-primary/20',
-        completed:    'bg-primary text-primary-foreground',
+        pending: 'bg-secondary text-secondary-foreground',
+        'in-progress': 'bg-primary/10 text-primary border border-primary/20',
+        completed: 'bg-primary text-primary-foreground',
     };
     return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${map[status] ?? 'bg-muted text-muted-foreground'}`}>{status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>;
 }
@@ -144,46 +147,85 @@ function Avatar({ name, avatar, size = 'md' }: { name: string; avatar?: string |
 }
 
 // ── Task Item ─────────────────────────────────────────────────────────────────
-function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
-    task: Task; goalSlug: string; isAdminOrManager: boolean; authUserId: number;
+function TaskItem({ task, goalSlug }: {
+    task: Task; goalSlug: string;
 }) {
-    const [open, setOpen]           = useState(false);
+    const { delete: destroy } = useForm();
+    const [open, setOpen] = useState(false);
     const [extendOpen, setExtendOpen] = useState(false);
     const [newDeadline, setNewDeadline] = useState<Date | undefined>();
-    const [calOpen, setCalOpen]     = useState(false);
+    const [calOpen, setCalOpen] = useState(false);
 
-    const dl            = deadlineInfo(task.deadline);
-    const submissions   = task.task_productivities ?? [];
+    const dl = deadlineInfo(task.deadline);
+    const submissions = task.task_productivities ?? [];
     const submissionCount = submissions.length;
 
     const handleApproveResubmission = () => {
         if (!newDeadline) return;
         router.put(`/tasks/${task.slug}/approve-resubmission`, { deadline: format(newDeadline, 'yyyy-MM-dd') }, {
-            onSuccess: () => setExtendOpen(false),
+            onSuccess: () => {
+                setExtendOpen(false);
+                toast.success('Resubmission approved successfully.');
+            },
+            onError: () => toast.error('Please fix the errors below.'),
         });
     };
 
     const handleApproveSubmission = (id: number) => {
-        router.put(TaskProductivityController.approveSubmission(id).url, { preserveScroll: true });
+        router.put(TaskProductivityController.approveSubmission(id).url, { preserveScroll: true }), {
+            onSuccess: () => toast.success('Task submission approved successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        };
     };
 
     const handleRejectResubmission = () => {
-        router.put(`/tasks/${task.slug}/reject-resubmission`);
+        router.put(`/tasks/${task.slug}/reject-resubmission`), {
+            onSuccess: () => toast.success('Reject resubmission sent successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        };
     };
 
     const handleRequestResubmission = () => {
-        router.put(TaskProductivityController.requestResubmission({ task: task.slug }).url);
+        router.put(TaskProductivityController.requestResubmission({ task: task.slug }).url), {
+            onSuccess: () => toast.success('Request resubmission sent successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        };
     };
 
-    const handleDeleteTask = () => {
-        if (confirm('Delete this task? This cannot be undone.')) {
-            router.delete(`/goals/${goalSlug}/tasks/${task.slug}`);
-        }
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Updated delete handler to open confirmation dialog
+    const handleDeleteTask = (task: Task) => {
+        setTaskToDelete(task);
+        setDeleteDialogOpen(true);
+    };
+
+    // Actual delete execution
+    const confirmDelete = () => {
+        if (!taskToDelete) return;
+
+        setIsDeleting(true);
+        destroy(TaskController.destroy({ goal: goalSlug, task: taskToDelete.slug }).url, {
+            onSuccess: (page: { props: any; }) => {
+                const successMessage = (page.props as any).flash?.success || 'Task deleted successfully.';
+                toast.success(successMessage);
+                setDeleteDialogOpen(false);
+                setTaskToDelete(null);
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors).flat()[0] || 'Failed to delete task.';
+                toast.error(errorMessage);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            }
+        });
     };
 
     return (
         <div className="task-item group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20">
-
             {/* Header */}
             <div
                 id={`task-${task.slug}`}
@@ -284,7 +326,7 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                         </span>
                     )}
 
-                    {isAdminOrManager && (
+                    <PermissionGuard permission="modify-task">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted-foreground transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground">
@@ -300,13 +342,13 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                     </DropdownMenuItem>
                                 </PermissionGuard>
                                 <PermissionGuard permission="delete task">
-                                    <DropdownMenuItem onClick={handleDeleteTask} className="flex items-center gap-2 text-sm text-accent focus:text-accent">
+                                    <DropdownMenuItem onClick={() => handleDeleteTask(task)} className="flex items-center gap-2 text-sm text-accent focus:text-accent">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </DropdownMenuItem>
                                 </PermissionGuard>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                    )}
+                    </PermissionGuard>
                 </div>
             </div>
 
@@ -392,36 +434,38 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
 
                                         {/* Submission actions */}
                                         <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-                                            {isAdminOrManager ? (
-                                                sub.status === 'approved' ? (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-                                                        <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-                                                    </span>
-                                                ) : sub.status === 'rejected' ? (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
-                                                        <XCircle className="h-3.5 w-3.5" /> Rejected
-                                                    </span>
-                                                ) : (
-                                                    <div className="flex gap-2">
+                                            {sub.status === 'approved' ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" /> Approved
+                                                </span>
+                                            ) : sub.status === 'rejected' ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
+                                                    <XCircle className="h-3.5 w-3.5" /> Rejected
+                                                </span>
+                                            ) : sub.status === 'rejected' ? (
+                                                <PermissionGuard permission="resubmit productivity">
+                                                    <Link href={TaskProductivityController.showResubmitForm({ task: task.slug, task_productivity: sub.id }).url}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
+                                                        <RotateCcw className="h-3.5 w-3.5" /> Resubmit
+                                                    </Link>
+                                                </PermissionGuard>
+                                            ) : sub.status === 'pending' ? (
+                                                <div className="flex gap-2">
+                                                    <PermissionGuard permission="approve productivity">
                                                         <button onClick={() => handleApproveSubmission(sub.id)}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                                                         </button>
+                                                    </PermissionGuard>
+                                                    <PermissionGuard permission="reject productivity">
                                                         <Link href={TaskProductivityController.rejectSubmissionForm(sub.id).url}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent transition-all hover:bg-accent hover:text-accent-foreground active:scale-95">
                                                             <XCircle className="h-3.5 w-3.5" /> Reject
                                                         </Link>
-                                                    </div>
-                                                )
-                                            ) : (
-                                                sub.status === 'rejected' && (
-                                                    <PermissionGuard permission="resubmit productivity">
-                                                        <Link href={TaskProductivityController.showResubmitForm({ task: task.slug, task_productivity: sub.id }).url}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
-                                                            <RotateCcw className="h-3.5 w-3.5" /> Resubmit
-                                                        </Link>
                                                     </PermissionGuard>
-                                                )
+                                                </div>
+                                            ) : (
+                                                <span>{sub.status}</span>
                                             )}
                                         </div>
                                     </div>
@@ -475,7 +519,6 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                                         captionLayout="dropdown"
                                         onSelect={(d) => { setNewDeadline(d); setCalOpen(false); }}
                                         disabled={(d) => d < startOfDay(new Date())}
-                                        initialFocus
                                     />
                                 </PopoverContent>
                             </Popover>
@@ -495,20 +538,34 @@ function TaskItem({ task, goalSlug, isAdminOrManager, authUserId }: {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <DeleteConfirmationDialog
+                isOpen={deleteDialogOpen}
+                onClose={() => {
+                    setDeleteDialogOpen(false);
+                    setTaskToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+                title="Delete Task"
+                itemName={taskToDelete?.slug}
+                isLoading={isDeleting}
+                confirmText="Delete Task"
+            />
         </div>
     );
 }
 
 // ── Filter config ─────────────────────────────────────────────────────────────
 const TASK_FILTERS = [
-    { key: 'all',                    label: 'All'                  },
-    { key: 'approved',               label: 'Approved'             },
-    { key: 'rejected',               label: 'Rejected'             },
-    { key: 'pending',                label: 'Pending'              },
-    { key: 'resubmission_requested', label: 'Resubmission Req.'    },
-    { key: 'approved_resubmission',  label: 'Resubmission OK'      },
-    { key: 'rejected_resubmission',  label: 'Rejected Resubmission'},
-    { key: 'completed_late',         label: 'Late'                 },
+    { key: 'all', label: 'All' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'rejected', label: 'Rejected' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'resubmission_requested', label: 'Resubmission Req.' },
+    { key: 'approved_resubmission', label: 'Resubmission OK' },
+    { key: 'rejected_resubmission', label: 'Rejected Resubmission' },
+    { key: 'completed_late', label: 'Late' },
 ];
 
 const normStatus = (s: string) => s === 'completed' ? 'approved' : s;
@@ -516,13 +573,12 @@ const normStatus = (s: string) => s === 'completed' ? 'approved' : s;
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) {
     const roleValue = Array.isArray(authUserRole) ? (authUserRole[0] ?? 'staff') : authUserRole;
-    const isAdminOrManager = roleValue === 'admin' || roleValue === 'project-manager';
 
     const [taskFilter, setTaskFilter] = useState('all');
 
-    const tasks         = goal.tasks         ?? [];
+    const tasks = goal.tasks ?? [];
     const assignedUsers = goal.assigned_users ?? [];
-    const sdgs          = goal.goal_with_sdgs ?? [];
+    const sdgs = goal.goal_with_sdgs ?? [];
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Goals', href: '/goals' },
@@ -536,7 +592,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
         [tasks, taskFilter]
     );
 
-    const progressPct  = Math.min(100, Math.max(0, goal.compliance_percentage ?? 0));
+    const progressPct = Math.min(100, Math.max(0, goal.compliance_percentage ?? 0));
     const completionPct = progressPct;
 
     // Add these state variables with your other useState declarations
@@ -546,6 +602,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={goal.title} />
+            <CustomToast />
 
             <style>{`
                 @keyframes showReveal {
@@ -605,10 +662,10 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                     {/* ── Stat strip ── */}
                     <div className="show-section grid grid-cols-2 gap-3 sm:grid-cols-4" style={{ animationDelay: '80ms' }}>
                         {[
-                            { label: 'Status',      value: goal.status.replace('-',' ').replace(/\b\w/g, l => l.toUpperCase()), color: 'bg-primary text-primary-foreground' },
-                            { label: 'Type',        value: `${goal.type} Term`,                                                  color: 'bg-secondary text-secondary-foreground' },
-                            { label: 'Tasks',       value: `${tasks.length}`,                                                    color: 'bg-card border border-border text-foreground' },
-                            { label: 'Compliance',  value: `${progressPct}%`,                                                    color: progressPct >= 100 ? 'bg-primary text-primary-foreground' : 'bg-accent/10 text-accent border border-accent/20' },
+                            { label: 'Status', value: goal.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()), color: 'bg-primary text-primary-foreground' },
+                            { label: 'Type', value: `${goal.type} Term`, color: 'bg-secondary text-secondary-foreground' },
+                            { label: 'Tasks', value: `${tasks.length}`, color: 'bg-card border border-border text-foreground' },
+                            { label: 'Compliance', value: `${progressPct}%`, color: progressPct >= 100 ? 'bg-primary text-primary-foreground' : 'bg-accent/10 text-accent border border-accent/20' },
                         ].map(({ label, value, color }) => (
                             <div key={label} className={`flex flex-col gap-0.5 rounded-xl p-4 ${color}`}>
                                 <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{label}</p>
@@ -712,8 +769,8 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                                             onClick={() => setActiveSdgTab(sdg.id)}
                                             className={`
                                                 relative inline-flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium transition-all
-                                                ${activeSdgTab === sdg.id 
-                                                    ? 'bg-primary/10 text-primary shadow-sm' 
+                                                ${activeSdgTab === sdg.id
+                                                    ? 'bg-primary/10 text-primary shadow-sm'
                                                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                                 }
                                             `}
@@ -738,9 +795,8 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                                 {sdgs.map((sdg) => (
                                     <div
                                         key={sdg.id}
-                                        className={`transition-all duration-300 ${
-                                            activeSdgTab === sdg.id ? 'block animate-in fade-in-0 slide-in-from-top-4' : 'hidden'
-                                        }`}
+                                        className={`transition-all duration-300 ${activeSdgTab === sdg.id ? 'block animate-in fade-in-0 slide-in-from-top-4' : 'hidden'
+                                            }`}
                                     >
                                         {/* SDG Header Info */}
                                         <div className="mb-4 rounded-lg bg-primary/5 p-4">
@@ -780,11 +836,10 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                                                         {expandedSdg === sdg.id ? 'Show less' : `Show all (${sdg.users.length})`}
                                                     </button>
                                                 </div>
-                                                <div className={`grid gap-3 transition-all duration-300 ${
-                                                    expandedSdg === sdg.id 
-                                                        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
-                                                        : 'grid-cols-1 sm:grid-cols-2'
-                                                }`}>
+                                                <div className={`grid gap-3 transition-all duration-300 ${expandedSdg === sdg.id
+                                                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                                                    : 'grid-cols-1 sm:grid-cols-2'
+                                                    }`}>
                                                     {(expandedSdg === sdg.id ? sdg.users : sdg.users.slice(0, 4)).map(user => (
                                                         <div key={user.id}
                                                             className="flex items-center gap-3 rounded-xl border border-border p-3 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm">
@@ -870,13 +925,11 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                         ) : (
                             <div className="space-y-3">
                                 {filteredTasks.map(task => (
-                                    <TaskItem key={task.id} task={task} goalSlug={goal.slug}
-                                        isAdminOrManager={isAdminOrManager} authUserId={authUserId} />
+                                    <TaskItem key={task.id} task={task} goalSlug={goal.slug} />
                                 ))}
                             </div>
                         )}
                     </Section>
-
                 </div>
             </div>
         </AppLayout>
