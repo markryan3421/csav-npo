@@ -9,7 +9,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isBefore, isAfter, startOfDay, differenceInDays } from 'date-fns';
+import { format, isBefore, isAfter, startOfDay } from 'date-fns';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { CustomTextarea } from '@/components/ui/custom-textarea';
@@ -52,8 +52,8 @@ export default function Edit({ goal, task }: EditTaskProps) {
     const goalEnd = new Date(goal.end_date);
     const daysRemaining = Math.max(0, Math.ceil((goalEnd.getTime() - Date.now()) / 86400000));
 
-    const isDateDisabled = (date: Date) =>
-        isBefore(date, today) || isAfter(date, goalEnd);
+    const isDateDisabled = (d: Date) =>
+        isBefore(d, today) || isAfter(d, goalEnd);
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         setDate(selectedDate);
@@ -90,43 +90,61 @@ export default function Edit({ goal, task }: EditTaskProps) {
             <div className="flex flex-1 flex-col items-center gap-6 p-4 pb-12 md:p-6 md:pb-16">
                 <div className="w-full max-w-2xl form-fade-up space-y-4">
 
-                    {/* Goal context card — navy header */}
-                    <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="bg-[#1d4791] px-5 py-4 flex items-center justify-between">
+                    {/* ── Goal context card ── */}
+                    <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+                        <div className="bg-primary px-5 py-4 flex items-center justify-between">
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Goal</p>
-                                <p className="text-sm font-semibold text-white truncate max-w-xs mt-0.5">{goal.title}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/50">
+                                    Goal
+                                </p>
+                                <p className="mt-0.5 truncate text-sm font-semibold text-primary-foreground max-w-xs">
+                                    {goal.title}
+                                </p>
                             </div>
-                            <div className="text-right shrink-0">
-                                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Days Remaining</p>
-                                <p className="text-xl font-semibold text-white mt-0.5">{daysRemaining}d</p>
+                            <div className="shrink-0 text-right">
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/50">
+                                    Days Remaining
+                                </p>
+                                <p className="mt-0.5 text-xl font-semibold text-primary-foreground">
+                                    {daysRemaining}d
+                                </p>
                             </div>
                         </div>
-                        <div className="bg-white px-5 py-3 flex items-center gap-2 text-xs text-slate-500">
-                            <Clock className="h-3.5 w-3.5 text-[#1d4791] shrink-0" />
-                            <span>Goal deadline: <span className="font-semibold text-slate-700">{format(goalEnd, 'MMMM d, yyyy')}</span> — task deadline must fall within this window.</span>
+                        <div className="flex items-center gap-2 border-t border-border bg-card px-5 py-3 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            <span>
+                                Goal deadline:{' '}
+                                <span className="font-semibold text-foreground">
+                                    {format(goalEnd, 'MMMM d, yyyy')}
+                                </span>{' '}
+                                — task deadline must fall within this window.
+                            </span>
                         </div>
                     </div>
 
-                    {/* Main form card */}
-                    <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div className="bg-[#1d4791] px-5 py-4 flex items-center justify-between">
+                    {/* ── Main form card ── */}
+                    <div className="overflow-hidden rounded-xl border border-border shadow-sm">
+                        <div className="bg-primary px-5 py-4 flex items-center justify-between">
                             <div>
-                                <h1 className="text-base font-semibold text-white tracking-tight">Edit Task</h1>
-                                <p className="text-xs text-white/60 mt-0.5">Update task details below.</p>
+                                <h1 className="text-base font-semibold tracking-tight text-primary-foreground">
+                                    Edit Task
+                                </h1>
+                                <p className="mt-0.5 text-xs text-primary-foreground/60">
+                                    Update task details below.
+                                </p>
                             </div>
-                            <div className="rounded-lg bg-white/10 p-2 shrink-0">
-                                <Save className="h-4 w-4 text-white" />
+                            <div className="shrink-0 rounded-lg bg-primary-foreground/10 p-2">
+                                <Save className="h-4 w-4 text-primary-foreground" />
                             </div>
                         </div>
 
-                        <div className="bg-white px-5 py-5">
+                        <div className="bg-card px-5 py-5">
                             <form onSubmit={handleSubmit} className="space-y-5">
 
                                 {/* Title */}
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                                        Task Title <span className="text-[#d85e39]">*</span>
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                                        Task Title <span className="text-accent">*</span>
                                     </p>
                                     <Input
                                         id="task-title"
@@ -135,14 +153,14 @@ export default function Edit({ goal, task }: EditTaskProps) {
                                         onChange={(e) => setData('title', e.target.value)}
                                         required
                                         placeholder="Enter a clear and specific task title..."
-                                        className="h-10 rounded-lg border-slate-200 text-sm focus:border-[#1d4791] focus:ring-1 focus:ring-[#1d4791]"
+                                        className="h-10 rounded-lg border-border text-sm focus:border-primary focus:ring-1 focus:ring-primary"
                                     />
                                     <InputError message={errors.title} />
                                 </div>
 
                                 {/* Description */}
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                                         Description
                                     </p>
                                     <CustomTextarea
@@ -151,31 +169,33 @@ export default function Edit({ goal, task }: EditTaskProps) {
                                         value={data.description}
                                         onChange={(e) => setData('description', e.target.value)}
                                         placeholder="Provide a detailed description of what needs to be done..."
-                                        className="w-full resize-none rounded-lg border-slate-200 text-sm focus:border-[#1d4791] focus:ring-1 focus:ring-[#1d4791]"
+                                        className="w-full resize-none rounded-lg border-border text-sm focus:border-primary focus:ring-1 focus:ring-primary"
                                     />
                                     <InputError message={errors.description} />
                                 </div>
 
                                 {/* Due Date */}
-                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                                        <CalendarIcon className="h-3.5 w-3.5 text-[#1d4791]" />
+                                <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                                        <CalendarIcon className="h-3.5 w-3.5 text-primary" />
                                         Timeline &amp; Deadline
                                     </p>
 
                                     <div className="space-y-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Due Date</p>
+                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                                            Due Date
+                                        </p>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <button
                                                     type="button"
-                                                    className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 transition-all
-                                                        hover:border-[#1d4791]/40 focus:outline-none focus:ring-1 focus:ring-[#1d4791] focus:border-[#1d4791]"
+                                                    className="flex h-10 w-full items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-foreground transition-all
+                                                        hover:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                                                 >
-                                                    <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                                                    <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                                                     {date
                                                         ? <span>{format(date, 'PPP')}</span>
-                                                        : <span className="text-slate-400">Select task due date</span>
+                                                        : <span className="text-muted-foreground">Select task due date</span>
                                                     }
                                                 </button>
                                             </PopoverTrigger>
@@ -186,47 +206,60 @@ export default function Edit({ goal, task }: EditTaskProps) {
                                                     onSelect={handleDateSelect}
                                                     disabled={isDateDisabled}
                                                     initialFocus
-                                                    className="[&_.rdp-day_selected]:bg-[#1d4791] [&_.rdp-day_selected]:text-white"
+                                                    className="[&_.rdp-day_selected]:bg-primary [&_.rdp-day_selected]:text-primary-foreground"
                                                 />
                                             </PopoverContent>
                                         </Popover>
                                         <InputError message={errors.deadline} />
                                     </div>
 
-                                    <div className="flex items-start gap-2 text-xs text-slate-500">
-                                        <AlertCircle className="h-3.5 w-3.5 text-[#1d4791] shrink-0 mt-0.5" />
+                                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                                         <span>
                                             Must be completed before goal deadline:{' '}
-                                            <span className="font-semibold text-slate-700">{format(goalEnd, 'MMMM d, yyyy')}</span>
+                                            <span className="font-semibold text-foreground">
+                                                {format(goalEnd, 'MMMM d, yyyy')}
+                                            </span>
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* Editing tips */}
-                                <div className="rounded-lg border border-[#1d4791]/10 bg-[#1d4791]/5 p-4">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#1d4791] mb-2">Editing Tips</p>
-                                    <ul className="space-y-1 text-xs text-slate-600">
-                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Update deadlines carefully – they affect task priority.</li>
-                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Ensure the new deadline falls within the goal's timeline.</li>
-                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Clear descriptions help assignees understand expectations.</li>
+                                <div className="rounded-lg border border-primary/10 bg-primary/5 p-4">
+                                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-primary">
+                                        Editing Tips
+                                    </p>
+                                    <ul className="space-y-1 text-xs text-muted-foreground">
+                                        <li className="flex items-start gap-1.5">
+                                            <span className="mt-0.5 text-primary">•</span>
+                                            Update deadlines carefully – they affect task priority.
+                                        </li>
+                                        <li className="flex items-start gap-1.5">
+                                            <span className="mt-0.5 text-primary">•</span>
+                                            Ensure the new deadline falls within the goal's timeline.
+                                        </li>
+                                        <li className="flex items-start gap-1.5">
+                                            <span className="mt-0.5 text-primary">•</span>
+                                            Clear descriptions help assignees understand expectations.
+                                        </li>
                                     </ul>
                                 </div>
 
                                 {/* Actions */}
-                                <div className="pt-2 border-t border-slate-100">
+                                <div className="border-t border-border pt-2">
                                     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                                         <Link
                                             href={`/goals/${goal.slug}`}
-                                            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
+                                            className="inline-flex h-9 items-center justify-center rounded-lg border-2 border-primary bg-card px-4 text-sm font-medium text-primary transition-all hover:bg-primary hover:text-primary-foreground active:scale-95"
                                         >
                                             Cancel
                                         </Link>
                                         <button
                                             type="submit"
                                             disabled={processing}
-                                            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium text-white shadow-sm shadow-[#1d4791]/20 transition-all
-                                                bg-[#1d4791] hover:bg-[#1d4791]/90
-                                                disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition-all
+                                                hover:brightness-110 hover:shadow-lg active:scale-95
+                                                disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <Save className="h-3.5 w-3.5" />
                                             {processing ? 'Saving…' : 'Save Changes'}

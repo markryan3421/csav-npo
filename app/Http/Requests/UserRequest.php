@@ -24,7 +24,7 @@ class UserRequest extends FormRequest
     {
         $rules = [
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:3000',
-            'name' => 'required|string|regex:/^[a-zA-Z0-9]+$/|max:255',
+            'name' => 'required|string|regex:/^[a-zA-Z0-9\s]+$/|max:255|max:255',
             'email' => [
                 'required',
                 'string',

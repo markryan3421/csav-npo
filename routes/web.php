@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GoalController;
+use App\Http\Controllers\LogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TaskProductivityController;
 use App\Http\Controllers\PermissionController;
@@ -71,6 +72,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Late Submit Routes
     Route::get('tasks/{task:slug}/late-resubmit', [TaskProductivityController::class, 'lateResubmitForm'])->name('tasks.late-resubmit.form');
     Route::put('tasks/{task:slug}/late-resubmit', [TaskProductivityController::class, 'storeLateResubmit'])->name('tasks.late-resubmit.store');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
 });
 
 require __DIR__ . '/settings.php';

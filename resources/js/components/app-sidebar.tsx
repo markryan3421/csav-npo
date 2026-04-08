@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield } from 'lucide-react';
+import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield, Logs } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -52,6 +52,12 @@ const ExpendituresItems: NavItem[] = [
         href: '/users',
         icon: Users,
         permission: 'access user',
+    },
+    {
+        title: 'Logs',
+        href: '/logs',
+        icon: Logs,
+        // permission: 'access user',
     },
 ];
 
