@@ -1,4 +1,5 @@
 import UserController from '@/actions/App/Http/Controllers/UserController';
+import { CustomToast } from '@/components/custom-toast';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -72,7 +73,7 @@ export default function Index({ staffUsers }: IndexProps) {
 
             <div className="min-h-screen py-8 md:py-12">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
+                    <CustomToast />
                     {/* ── Header ── */}
                     <div className="page-header mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div className="flex items-center gap-4">

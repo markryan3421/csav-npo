@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { ChevronsUpDown, ImagePlus, UserPlus, ArrowLeft } from 'lucide-react';
+import { ChevronsUpDown, ImagePlus, UserPlus, ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -318,6 +318,7 @@ export default function CreateUser({ roles, sdgs }: CreateUserProps) {
                                                active:scale-95 hover:brightness-110 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60
                                                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                                 >
+                                    {processing && <LoaderCircle className='h-4 w-4 animate-spin' />}
                                     {processing ? 'Creating…' : 'Create User'}
                                 </button>
                             </div>
