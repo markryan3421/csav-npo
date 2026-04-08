@@ -578,7 +578,7 @@ export default function Index({
                             </div>
 
                             <DeleteConfirmationModal
-                                isOpen={deleteDialogOpen}
+                                open={deleteDialogOpen}
                                 onClose={() => {
                                     setDeleteDialogOpen(false);
                                     setItemToDelete(null);

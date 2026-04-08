@@ -439,16 +439,17 @@ function TaskItem({ task, goalSlug }: {
                                                     <CheckCircle2 className="h-3.5 w-3.5" /> Approved
                                                 </span>
                                             ) : sub.status === 'rejected' ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
-                                                    <XCircle className="h-3.5 w-3.5" /> Rejected
-                                                </span>
-                                            ) : sub.status === 'rejected' ? (
-                                                <PermissionGuard permission="resubmit productivity">
-                                                    <Link href={TaskProductivityController.showResubmitForm({ task: task.slug, task_productivity: sub.id }).url}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
-                                                        <RotateCcw className="h-3.5 w-3.5" /> Resubmit
-                                                    </Link>
-                                                </PermissionGuard>
+                                                <>
+                                                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
+                                                        <XCircle className="h-3.5 w-3.5" /> Rejected
+                                                    </span>
+                                                    <PermissionGuard permission="resubmit productivity">
+                                                        <Link href={TaskProductivityController.showResubmitForm({ task: task.slug, task_productivity: sub.id }).url}
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
+                                                            <RotateCcw className="h-3.5 w-3.5" /> Resubmit
+                                                        </Link>
+                                                    </PermissionGuard>
+                                                </>
                                             ) : sub.status === 'pending' ? (
                                                 <div className="flex gap-2">
                                                     <PermissionGuard permission="approve productivity">

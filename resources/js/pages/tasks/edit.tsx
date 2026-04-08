@@ -1,17 +1,15 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { CalendarIcon, ArrowLeft, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { CalendarIcon, Save, Clock, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isBefore, isAfter, startOfDay } from 'date-fns';
+import { format, isBefore, isAfter, startOfDay, differenceInDays } from 'date-fns';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { CustomTextarea } from '@/components/ui/custom-textarea';
@@ -50,12 +48,12 @@ export default function Edit({ goal, task }: EditTaskProps) {
         task.deadline ? new Date(task.deadline) : undefined
     );
 
-    // Disable dates before today and after goal end date
     const today = startOfDay(new Date());
     const goalEnd = new Date(goal.end_date);
-    const isDateDisabled = (date: Date) => {
-        return isBefore(date, today) || isAfter(date, goalEnd);
-    };
+    const daysRemaining = Math.max(0, Math.ceil((goalEnd.getTime() - Date.now()) / 86400000));
+
+    const isDateDisabled = (date: Date) =>
+        isBefore(date, today) || isAfter(date, goalEnd);
 
     const handleDateSelect = (selectedDate: Date | undefined) => {
         setDate(selectedDate);
@@ -66,7 +64,7 @@ export default function Edit({ goal, task }: EditTaskProps) {
         e.preventDefault();
         put(TaskController.update({ goal: goal.slug, task: task.slug }).url, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Goal updated successfully.'),
+            onSuccess: () => toast.success('Task updated successfully.'),
             onError: () => toast.error('Please fix the errors below.'),
         });
     };
@@ -81,194 +79,165 @@ export default function Edit({ goal, task }: EditTaskProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Edit Task: ${task.title}`} />
 
-            <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Header Section */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-                    <div className="mb-4 lg:mb-0">
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-                            Edit Task
-                        </h1>
-                        <p className="text-muted-foreground mt-2">Update task details</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <div className="text-sm text-muted-foreground">Goal</div>
-                            <div className="text-lg font-semibold text-blue-400 truncate max-w-xs">
-                                {goal.title}
-                            </div>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                            <Save className="h-6 w-6 text-white" />
-                        </div>
-                    </div>
-                </div>
+            <style>{`
+                @keyframes formFadeUp {
+                    from { opacity: 0; transform: translateY(12px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+                .form-fade-up { animation: formFadeUp 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.05) both; }
+            `}</style>
 
-                {/* Goal Info Card */}
-                <div className="bg-gradient-to-br from-card to-card/90 p-6 rounded-2xl border border-border shadow-lg mb-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mr-4 border border-primary/20">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                </svg>
-                            </div>
+            <div className="flex flex-1 flex-col items-center gap-6 p-4 pb-12 md:p-6 md:pb-16">
+                <div className="w-full max-w-2xl form-fade-up space-y-4">
+
+                    {/* Goal context card — navy header */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="bg-[#1d4791] px-5 py-4 flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-semibold text-foreground">Goal Timeline</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Deadline: {format(new Date(goal.end_date), 'MMMM d, yyyy')}
-                                </p>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Goal</p>
+                                <p className="text-sm font-semibold text-white truncate max-w-xs mt-0.5">{goal.title}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50">Days Remaining</p>
+                                <p className="text-xl font-semibold text-white mt-0.5">{daysRemaining}d</p>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-xs text-muted-foreground">Days Remaining</div>
-                            <div className="text-lg font-bold text-blue-400">
-                                {Math.max(0, Math.ceil((new Date(goal.end_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24)))} days
-                            </div>
+                        <div className="bg-white px-5 py-3 flex items-center gap-2 text-xs text-slate-500">
+                            <Clock className="h-3.5 w-3.5 text-[#1d4791] shrink-0" />
+                            <span>Goal deadline: <span className="font-semibold text-slate-700">{format(goalEnd, 'MMMM d, yyyy')}</span> — task deadline must fall within this window.</span>
                         </div>
                     </div>
-                </div>
 
-                {/* Edit Form */}
-                <div className="bg-gradient-to-br from-card to-card/90 backdrop-blur-sm rounded-2xl border border-border shadow-2xl p-8">
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Title Field */}
-                        <div>
-                            <Label htmlFor="task-title" className="block text-sm font-semibold mb-3 flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Task Title
-                            </Label>
-                            <Input
-                                id="task-title"
-                                type="text"
-                                value={data.title}
-                                onChange={(e) => setData('title', e.target.value)}
-                                required
-                                placeholder="Enter a clear and specific task title..."
-                                className="w-full"
-                            />
-                            <InputError message={errors.title} />
+                    {/* Main form card */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div className="bg-[#1d4791] px-5 py-4 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-base font-semibold text-white tracking-tight">Edit Task</h1>
+                                <p className="text-xs text-white/60 mt-0.5">Update task details below.</p>
+                            </div>
+                            <div className="rounded-lg bg-white/10 p-2 shrink-0">
+                                <Save className="h-4 w-4 text-white" />
+                            </div>
                         </div>
 
-                        {/* Description Field */}
-                        <div>
-                            <Label htmlFor="task-description" className="block text-sm font-semibold mb-3 flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                                </svg>
-                                Description
-                            </Label>
-                            <CustomTextarea
-                                id="task-description"
-                                rows={5}
-                                value={data.description}
-                                onChange={(e) => setData('description', e.target.value)}
-                                placeholder="Provide detailed description about what needs to be done, including any specific requirements or objectives..."
-                                className="w-full resize-none"
-                            />
-                            <InputError message={errors.description} />
-                        </div>
+                        <div className="bg-white px-5 py-5">
+                            <form onSubmit={handleSubmit} className="space-y-5">
 
-                        {/* Due Date Field */}
-                        <div className="bg-muted/30 p-6 rounded-2xl border border-border">
-                            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Timeline & Deadline
-                            </h3>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <Label htmlFor="task-due-date" className="block text-sm font-medium mb-2">
-                                        Due Date
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                id="task-due-date"
-                                                className="w-full justify-start px-4 py-3.5 text-left font-normal h-auto"
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {date ? format(date, 'PPP') : <span>Select task due date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={date}
-                                                onSelect={handleDateSelect}
-                                                disabled={isDateDisabled}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <InputError message={errors.deadline} />
+                                {/* Title */}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                        Task Title <span className="text-[#d85e39]">*</span>
+                                    </p>
+                                    <Input
+                                        id="task-title"
+                                        type="text"
+                                        value={data.title}
+                                        onChange={(e) => setData('title', e.target.value)}
+                                        required
+                                        placeholder="Enter a clear and specific task title..."
+                                        className="h-10 rounded-lg border-slate-200 text-sm focus:border-[#1d4791] focus:ring-1 focus:ring-[#1d4791]"
+                                    />
+                                    <InputError message={errors.title} />
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg border border-border">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>
-                                        Must be completed before goal deadline:{' '}
-                                        <strong className="text-blue-300">{format(new Date(goal.end_date), 'MMMM d, yyyy')}</strong>
-                                    </span>
+                                {/* Description */}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                        Description
+                                    </p>
+                                    <CustomTextarea
+                                        id="task-description"
+                                        rows={5}
+                                        value={data.description}
+                                        onChange={(e) => setData('description', e.target.value)}
+                                        placeholder="Provide a detailed description of what needs to be done..."
+                                        className="w-full resize-none rounded-lg border-slate-200 text-sm focus:border-[#1d4791] focus:ring-1 focus:ring-[#1d4791]"
+                                    />
+                                    <InputError message={errors.description} />
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* Form Actions */}
-                        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-border">
-                            <Link
-                                href={`/goals/${goal.slug}`}
-                                className="inline-flex items-center justify-center px-8 py-3.5 text-sm font-medium text-muted-foreground bg-card border border-border rounded-xl hover:bg-muted/50 transition-all duration-200 order-2 sm:order-1"
-                            >
-                                <ArrowLeft className="h-5 w-5 mr-2" />
-                                Cancel
-                            </Link>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="group inline-flex items-center justify-center px-8 py-3.5 text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 transform hover:-translate-y-0.5 order-1 sm:order-2"
-                            >
-                                <Save className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                                {processing ? 'Saving...' : 'Update Task'}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
+                                {/* Due Date */}
+                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                                        <CalendarIcon className="h-3.5 w-3.5 text-[#1d4791]" />
+                                        Timeline &amp; Deadline
+                                    </p>
 
-                {/* Tips Section */}
-                <div className="mt-8 bg-gradient-to-br from-card to-card/90 backdrop-blur-sm rounded-2xl border border-border p-6">
-                    <div className="flex items-start">
-                        <div className="flex-shrink-0 mt-1">
-                            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div className="ml-4">
-                            <h3 className="text-lg font-semibold text-foreground">Editing Tips</h3>
-                            <div className="mt-2 text-sm text-muted-foreground space-y-2">
-                                <p className="flex items-start gap-2">
-                                    <span className="text-primary mt-0.5">•</span>
-                                    Update deadlines carefully – they affect task priority.
-                                </p>
-                                <p className="flex items-start gap-2">
-                                    <span className="text-primary mt-0.5">•</span>
-                                    Ensure the new deadline is still within the goal's timeline.
-                                </p>
-                                <p className="flex items-start gap-2">
-                                    <span className="text-primary mt-0.5">•</span>
-                                    Clear descriptions help assignees understand expectations.
-                                </p>
-                            </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Due Date</p>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 transition-all
+                                                        hover:border-[#1d4791]/40 focus:outline-none focus:ring-1 focus:ring-[#1d4791] focus:border-[#1d4791]"
+                                                >
+                                                    <CalendarIcon className="h-4 w-4 text-slate-400 shrink-0" />
+                                                    {date
+                                                        ? <span>{format(date, 'PPP')}</span>
+                                                        : <span className="text-slate-400">Select task due date</span>
+                                                    }
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 rounded-xl shadow-xl" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={date}
+                                                    onSelect={handleDateSelect}
+                                                    disabled={isDateDisabled}
+                                                    initialFocus
+                                                    className="[&_.rdp-day_selected]:bg-[#1d4791] [&_.rdp-day_selected]:text-white"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <InputError message={errors.deadline} />
+                                    </div>
+
+                                    <div className="flex items-start gap-2 text-xs text-slate-500">
+                                        <AlertCircle className="h-3.5 w-3.5 text-[#1d4791] shrink-0 mt-0.5" />
+                                        <span>
+                                            Must be completed before goal deadline:{' '}
+                                            <span className="font-semibold text-slate-700">{format(goalEnd, 'MMMM d, yyyy')}</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Editing tips */}
+                                <div className="rounded-lg border border-[#1d4791]/10 bg-[#1d4791]/5 p-4">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#1d4791] mb-2">Editing Tips</p>
+                                    <ul className="space-y-1 text-xs text-slate-600">
+                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Update deadlines carefully – they affect task priority.</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Ensure the new deadline falls within the goal's timeline.</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-[#1d4791] mt-0.5">•</span>Clear descriptions help assignees understand expectations.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="pt-2 border-t border-slate-100">
+                                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                        <Link
+                                            href={`/goals/${goal.slug}`}
+                                            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
+                                        >
+                                            Cancel
+                                        </Link>
+                                        <button
+                                            type="submit"
+                                            disabled={processing}
+                                            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-5 text-sm font-medium text-white shadow-sm shadow-[#1d4791]/20 transition-all
+                                                bg-[#1d4791] hover:bg-[#1d4791]/90
+                                                disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Save className="h-3.5 w-3.5" />
+                                            {processing ? 'Saving…' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </form>
                         </div>
                     </div>
+
                 </div>
             </div>
         </AppLayout>
