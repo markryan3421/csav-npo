@@ -27,6 +27,8 @@ import { CustomPagination } from '@/components/custom-pagination';
 import { GoalFilterBar } from '@/components/goals/goal-filter-bar';
 import { PermissionGuard } from '@/components/permission-guard';
 import DeleteConfirmationModal from '@/components/delete-confirmation-modal';
+import PortalIntro from '@/components/portal-intro';
+import PortalMorph from '@/components/portal-intro';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Goal {
@@ -284,7 +286,7 @@ export default function Index({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${selectedSdg?.name ?? 'Goals'} — Dashboard`} />
             <CustomToast />
-
+            {/* <PortalIntro text="Dashboard" /> */}
             <style>{`
                 @keyframes fadeUp {
                     from { opacity: 0; transform: translateY(20px); }
@@ -315,7 +317,15 @@ export default function Index({
 
             <div className="min-h-screen py-8 md:py-10">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
-
+                    <PortalMorph
+                        eyebrow="CSAV · SDG Goals"
+                        text="Goal Dashboard"
+                        textDisplayDuration={0.75}
+                        popInDuration={0.55}
+                        morphDuration={0.5}
+                        initialBgColor="#004025"
+                        onComplete={() => console.log('Portal done')}
+                    />
                     {/* ── Page header ── */}
                     <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div className="flex items-center gap-4">
