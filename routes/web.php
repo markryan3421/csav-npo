@@ -38,10 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('sdg', SdgController::class);
 
     Route::get('/change-sdg/{sdg:slug}', [SdgController::class, 'changeSdg'])->name('sdg.changeSdg');
-    Route::resource('goals', GoalController::class)->middleware('permission:access goal');
-    Route::resource('permissions', PermissionController::class)->middleware('permission:access permission');
-    Route::resource('roles', RoleController::class)->middleware('permission:access role');
-    Route::resource('users', UserController::class)->middleware('permission:access user');
+    Route::resource('goals', GoalController::class)->middleware('permission:access-goal');
+    Route::resource('permissions', PermissionController::class)->middleware('permission:access-permission');
+    Route::resource('roles', RoleController::class)->middleware('permission:access-role');
+    Route::resource('users', UserController::class)->middleware('permission:access-user');
 
     Route::prefix('goals/{goal:slug}')->group(function () {
         Route::resource('tasks', TaskController::class);

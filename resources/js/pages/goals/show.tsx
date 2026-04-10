@@ -266,14 +266,14 @@ function TaskItem({ task, goalSlug }: {
 
                     {task.status === 'pending' && (
                         task.deadline && new Date() < new Date(task.deadline) ? (
-                            <PermissionGuard permission="submit productivity" fallback={null}>
+                            <PermissionGuard permission="submit-productivity" fallback={null}>
                                 <Link href={`/tasks/${task.slug}/submit`}
                                     className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                     Submit
                                 </Link>
                             </PermissionGuard>
                         ) : (
-                            <PermissionGuard permission="request resubmission productivity" fallback={null}>
+                            <PermissionGuard permission="request resubmission-productivity" fallback={null}>
                                 <button onClick={handleRequestResubmission}
                                     className="inline-flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1.5 text-[11px] font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
                                     <RotateCcw className="h-3 w-3" /> Request Resubmission
@@ -284,13 +284,13 @@ function TaskItem({ task, goalSlug }: {
 
                     {task.status === 'resubmission_requested' && (
                         <div className="flex items-center gap-1">
-                            <PermissionGuard permission="approve resubmission productivity">
+                            <PermissionGuard permission="approve resubmission-productivity">
                                 <button onClick={() => setExtendOpen(true)}
                                     className="inline-flex items-center gap-1 rounded-lg bg-primary px-2 py-1.5 text-[11px] font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                     <CheckCircle2 className="h-3 w-3" /> Approve
                                 </button>
                             </PermissionGuard>
-                            <PermissionGuard permission="reject productivity">
+                            <PermissionGuard permission="reject-productivity">
                                 <button onClick={handleRejectResubmission}
                                     className="inline-flex items-center gap-1 rounded-lg bg-accent/10 px-2 py-1.5 text-[11px] font-bold text-accent transition-all hover:bg-accent hover:text-accent-foreground active:scale-95">
                                     <XCircle className="h-3 w-3" /> Reject
@@ -300,7 +300,7 @@ function TaskItem({ task, goalSlug }: {
                     )}
 
                     {task.status === 'approved_resubmission' && (
-                        <PermissionGuard permission="submit productivity">
+                        <PermissionGuard permission="submit-productivity">
                             <Link href={`/tasks/${task.slug}/late-resubmit`}
                                 className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                 Submit Now
@@ -334,14 +334,14 @@ function TaskItem({ task, goalSlug }: {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-36">
-                                <PermissionGuard permission="edit task">
+                                <PermissionGuard permission="edit-task">
                                     <DropdownMenuItem asChild>
                                         <Link href={`/goals/${goalSlug}/tasks/${task.slug}/edit`} className="flex items-center gap-2 text-sm">
                                             <Pencil className="h-3.5 w-3.5 text-primary" /> Edit
                                         </Link>
                                     </DropdownMenuItem>
                                 </PermissionGuard>
-                                <PermissionGuard permission="delete task">
+                                <PermissionGuard permission="delete-task">
                                     <DropdownMenuItem onClick={() => handleDeleteTask(task)} className="flex items-center gap-2 text-sm text-accent focus:text-accent">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </DropdownMenuItem>
@@ -443,7 +443,7 @@ function TaskItem({ task, goalSlug }: {
                                                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
                                                         <XCircle className="h-3.5 w-3.5" /> Rejected
                                                     </span>
-                                                    <PermissionGuard permission="resubmit productivity">
+                                                    <PermissionGuard permission="resubmit-productivity">
                                                         <Link href={TaskProductivityController.showResubmitForm({ task: task.slug, task_productivity: sub.id }).url}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition-all hover:brightness-95 active:scale-95">
                                                             <RotateCcw className="h-3.5 w-3.5" /> Resubmit
@@ -452,13 +452,13 @@ function TaskItem({ task, goalSlug }: {
                                                 </>
                                             ) : sub.status === 'pending' ? (
                                                 <div className="flex gap-2">
-                                                    <PermissionGuard permission="approve productivity">
+                                                    <PermissionGuard permission="approve-productivity">
                                                         <button onClick={() => handleApproveSubmission(sub.id)}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                                             <CheckCircle2 className="h-3.5 w-3.5" /> Approve
                                                         </button>
                                                     </PermissionGuard>
-                                                    <PermissionGuard permission="reject productivity">
+                                                    <PermissionGuard permission="reject-productivity">
                                                         <Link href={TaskProductivityController.rejectSubmissionForm(sub.id).url}
                                                             className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent transition-all hover:bg-accent hover:text-accent-foreground active:scale-95">
                                                             <XCircle className="h-3.5 w-3.5" /> Reject
@@ -881,7 +881,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                     {/* ── Tasks ── */}
                     <Section icon={Flag} title="Tasks" delay={200}
                         action={
-                            <PermissionGuard permission="create task" fallback={null}>
+                            <PermissionGuard permission="create-task" fallback={null}>
                                 <Link href={TaskController.create({ goal: goal.slug }).url}
                                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                     <Plus className="h-3.5 w-3.5" /> Add Task
@@ -907,7 +907,7 @@ export default function ShowGoal({ goal, authUserRole, authUserId }: ShowProps) 
                             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-16 text-center">
                                 <Flag className="mb-3 h-10 w-10 text-muted-foreground/30" />
                                 <p className="text-sm font-semibold text-muted-foreground">No tasks yet</p>
-                                <PermissionGuard permission="create task" fallback={null}>
+                                <PermissionGuard permission="create-task" fallback={null}>
                                     <Link href={TaskController.create({ goal: goal.slug }).url}
                                         className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-all hover:brightness-110 active:scale-95">
                                         <Plus className="h-3.5 w-3.5" /> Add First Task

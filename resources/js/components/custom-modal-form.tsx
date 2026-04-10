@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { LoaderCircle } from "lucide-react"
 import { usePage } from "@inertiajs/react"
 import { hasPermission } from "@/utils/authorization"
+import { PermissionGuard } from "./permission-guard"
 
 interface AddButtonProps {
     id: string,
@@ -119,13 +120,13 @@ export const CustomModalForm = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} modal>
-            {/* {addButton.permission && hasPermission(permissions, addButton.permission) && ( */}
-            <DialogTrigger asChild>
-                <Button type={addButton.type} id={addButton.id} variant={addButton.variant} className={addButton.className}>
-                    {addButton.icon && <addButton.icon />} {addButton.label}
-                </Button>
-            </DialogTrigger>
-            {/* )} */}
+            <PermissionGuard permission="create-user">
+                <DialogTrigger asChild>
+                    <Button type={addButton.type} id={addButton.id} variant={addButton.variant} className={addButton.className}>
+                        {addButton.icon && <addButton.icon />} {addButton.label}
+                    </Button>
+                </DialogTrigger>
+            </PermissionGuard>
 
             <DialogContent className="sm:max-w-[630px]">
                 <DialogHeader>

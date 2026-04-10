@@ -346,7 +346,7 @@ export default function Index({
                             </div>
                         </div>
 
-                        <PermissionGuard permission="create goal" fallback={null}>
+                        <PermissionGuard permission="create-goal" fallback={null}>
                             <Link
                                 as="button"
                                 href={GoalController.create().url}

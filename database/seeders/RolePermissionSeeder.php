@@ -62,7 +62,7 @@ class RolePermissionSeeder extends Seeder
         // Create permissions
         foreach ($resources as $resource => $config) {
             foreach ($config['actions'] as $action) {
-                $permissionName = $action . ' ' . $resource;
+                $permissionName = $action . '-' . $resource;
 
                 Permission::firstOrCreate(
                     ['name' => $permissionName, 'guard_name' => 'web'],
@@ -143,7 +143,7 @@ class RolePermissionSeeder extends Seeder
                     'approve resubmission productivity'
                 ]);
         })->get();
-        
+
         $managerRole->syncPermissions($managerPermissions);
 
         // ============================================================
@@ -157,7 +157,7 @@ class RolePermissionSeeder extends Seeder
                 'request resubmission productivity'
             ])
             ->get();
-        
+
         $staffRole->syncPermissions($staffPermissions);
 
         // ============================================================
