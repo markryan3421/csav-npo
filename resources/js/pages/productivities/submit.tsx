@@ -8,15 +8,16 @@ import { LoaderCircle, Upload, CalendarDays, ArrowLeft, FileText, Trash2 } from 
 import { useState, useRef, DragEvent } from 'react';
 import InputError from '@/components/input-error';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
+import { toast } from 'sonner';
 
 interface Task {
     id: number; slug: string; title: string;
     goal: { slug: string; title: string; };
 }
 
-const ALLOWED = ['doc','docx','pdf','xls','xlsx','ppt','pptx','txt','zip','rar','jpg','jpeg','png','gif'];
-const ACCEPT  = '.doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.jpg,.jpeg,.png,.gif';
-const MAX_MB  = 10;
+const ALLOWED = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar', 'jpg', 'jpeg', 'png', 'gif'];
+const ACCEPT = '.doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.jpg,.jpeg,.png,.gif';
+const MAX_MB = 10;
 
 function validateFile(f: File): boolean {
     const ext = f.name.split('.').pop()?.toLowerCase();
@@ -52,9 +53,9 @@ function DropZone({ files, onChange, disabled }: {
         onChange([...files, ...valid]);
     };
     const remove = (i: number) => { const n = [...files]; n.splice(i, 1); onChange(n); };
-    const onDragOver  = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(true);  };
+    const onDragOver = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(true); };
     const onDragLeave = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); };
-    const onDrop      = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); };
+    const onDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); };
 
     return (
         <div className="space-y-3">
@@ -85,7 +86,7 @@ function DropZone({ files, onChange, disabled }: {
                     <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
                         {files.map((f, i) => {
                             const ext = f.name.split('.').pop()?.toLowerCase();
-                            const isImg = ['jpg','jpeg','png','gif','webp'].includes(ext ?? '');
+                            const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext ?? '');
                             return (
                                 <div key={i} className="group flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3 transition-all hover:border-primary/40 hover:bg-primary/5">
                                     {isImg
@@ -121,7 +122,11 @@ export default function Submit({ task }: { task: Task }) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(TaskProductivityController.submit(task.slug).url, { forceFormData: true });
+        post(TaskProductivityController.submit(task.slug).url, {
+            forceFormData: true,
+            onSuccess: () => toast.success('Task productivity submitted successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        });
     };
 
     const breadcrumbs: BreadcrumbItem[] = [

@@ -24,16 +24,22 @@ class UserRequest extends FormRequest
     {
         $rules = [
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:3000',
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $this->route('user')?->id,
+            'name' => 'required|string|regex:/^[a-zA-Z0-9\s]+$/|max:255|max:255',
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'regex:/^[a-zA-Z0-9]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', // alphanumeric local part only
+                'max:255',
+                'unique:users,email,' . $this->route('user')?->id,
+            ],
             'role' => 'required|exists:roles,name',
             'sdgs' => 'nullable|array',
             'sdgs.*' => 'exists:sdgs,id',
         ];
 
-        // If password is present, require confirmation
         if ($this->filled('password')) {
-            $rules['password'] = 'required|confirmed|min:8';
+            $rules['password'] = 'required|confirmed|min:8|regex:/^[a-zA-Z0-9]+$/';
             $rules['password_confirmation'] = 'required';
         } else {
             $rules['password'] = 'nullable';
@@ -60,9 +66,12 @@ class UserRequest extends FormRequest
             'email.unique' => 'The email has already been taken.',
             'password.required' => 'The password field is required.',
             'password.confirmed' => 'The password confirmation does not match.',
+            'password.regex' => 'The password must only contain letters, numbers, and special characters.',
             'role.exists' => 'The selected role does not exist.',
             'sdgs.array' => 'The SDGs must be an array.',
             'sdgs.*.exists' => 'One or more selected SDGs do not exist.',
+            'name.regex' => 'The name may only contain letters and numbers (no spaces or punctuation).',
+            'email.regex' => 'The email local part (before @) may only contain letters and numbers.',
         ];
     }
 }

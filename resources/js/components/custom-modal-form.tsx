@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { LoaderCircle } from "lucide-react"
 import { usePage } from "@inertiajs/react"
 import { hasPermission } from "@/utils/authorization"
+import { PermissionGuard } from "./permission-guard"
 
 interface AddButtonProps {
     id: string,

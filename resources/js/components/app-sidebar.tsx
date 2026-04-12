@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield } from 'lucide-react';
+import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield, Logs } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -33,25 +33,31 @@ const ExpendituresItems: NavItem[] = [
         title: 'Dashboard',
         href: GoalController.index().url,
         icon: Landmark,
-        // permission: 'access goal',
+        // permission: 'access-goal',
     },
     {
         title: 'Permissions',
         href: '/permissions',
         icon: Lock,
-        permission: 'access permission',
+        permission: 'access-permission',
     },
     {
         title: 'Roles',
         href: '/roles',
         icon: Shield,
-        permission: 'access role',
+        permission: 'access-role',
     },
     {
         title: 'Users',
         href: '/users',
         icon: Users,
-        permission: 'access user',
+        permission: 'access-user',
+    },
+    {
+        title: 'Logs',
+        href: '/logs',
+        icon: Logs,
+        // permission: 'access user',
     },
 ];
 

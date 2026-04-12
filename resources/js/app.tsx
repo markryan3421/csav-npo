@@ -7,6 +7,15 @@ import '../css/app.css';
 import { initializeTheme } from '@/hooks/use-appearance';
 import './boostrap';
 import './echo';
+import { configureEcho } from '@laravel/echo-react';
+
+configureEcho({
+    broadcaster: 'reverb',
+});
+
+configureEcho({
+    broadcaster: 'reverb',
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

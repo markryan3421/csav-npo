@@ -1,9 +1,11 @@
 import UserController from '@/actions/App/Http/Controllers/UserController';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { ArrowLeft, Pencil, Trash2, ShieldCheck, Target, Calendar, Mail, User as UserIcon } from 'lucide-react';
+import DeleteConfirmationModal from '@/components/delete-confirmation-modal';
+import { useState } from 'react';
 
 interface Role { name: string; }
 interface Sdg { id: number; name: string; }
@@ -59,18 +61,36 @@ export default function ShowUser({ user }: ShowUserProps) {
         ? user.avatar.startsWith('http') ? user.avatar : `/storage/${user.avatar}`
         : null;
 
-    const handleDelete = (id: number) => {
-        if (confirm('Are you sure you want to delete this user?')) {
-            router.delete(UserController.destroy(id).url, {
-                preserveScroll: true,
-                onSuccess: (response: { props: FlashProps }) => {
-                    toast.success(response.props.flash?.success || 'User deleted successfully.');
-                },
-                onError: (error: Record<string, string>) => {
-                    toast.error(error?.message || 'Failed to delete user.');
-                },
-            });
-        }
+    // Delete confirmation states
+    const { delete: destroy } = useForm();
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClick = (user: User) => {
+        setItemToDelete(user);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!itemToDelete) return;
+
+        setIsDeleting(true);
+        destroy(UserController.destroy({ user: itemToDelete.id }).url, {
+            onSuccess: (page) => {
+                const successMessage = (page.props as any).flash?.success || 'User deleted successfully.';
+                toast.success(successMessage);
+                setDeleteDialogOpen(false);
+                setItemToDelete(null);
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors).flat()[0] || 'Failed to delete user.';
+                toast.error(errorMessage);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            },
+        });
     };
 
     return (
@@ -117,7 +137,7 @@ export default function ShowUser({ user }: ShowUserProps) {
                             {/* Delete */}
                             <button
                                 type="button"
-                                onClick={() => handleDelete(user.id)}
+                                onClick={() => handleDeleteClick(user)}
                                 className="inline-flex items-center gap-2 rounded-xl bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-all duration-200
                                            hover:bg-accent hover:text-accent-foreground hover:shadow-md active:scale-95
                                            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -125,6 +145,21 @@ export default function ShowUser({ user }: ShowUserProps) {
                                 <Trash2 className="h-4 w-4" />
                                 <span className="hidden sm:inline">Delete</span>
                             </button>
+
+                            <DeleteConfirmationModal
+                                open={deleteDialogOpen}
+                                onOpenChange={(open) => {
+                                    if (!open) {
+                                        setDeleteDialogOpen(false);
+                                        setItemToDelete(null);
+                                    }
+                                }}
+                                onConfirm={confirmDelete}
+                                title='Delete User'
+                                itemName={itemToDelete?.name || ''}
+                                isDeleting={isDeleting}
+                                confirmText='Delete User'
+                            />
                         </div>
                     </div>
 

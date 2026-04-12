@@ -25,7 +25,7 @@ class UserController extends Controller
         $staffUsers = User::with('roles')
             ->where('current_sdg_id', $user->current_sdg_id)
             ->where('id', '!=', $user->id)
-            ->role(['staff', 'project-manager', 'admin', 'super-admin'])
+            ->role(['staff', 'project-manager'])
             ->get()
             ->map(function ($user) {
                 return [
@@ -47,7 +47,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all();
+        $roles = Role::whereNotIn('name', ['super-admin', 'admin'])->get();
         $sdgs = Sdg::all();
         return Inertia::render('users/create', compact('roles', 'sdgs'));
     }

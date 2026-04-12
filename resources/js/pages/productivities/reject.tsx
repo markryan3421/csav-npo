@@ -6,6 +6,7 @@ import { CustomTextarea } from '@/components/ui/custom-textarea';
 import InputError from '@/components/input-error';
 import { AlertCircle, ArrowLeft, LoaderCircle, XCircle } from 'lucide-react';
 import TaskProductivityController from '@/actions/App/Http/Controllers/TaskProductivityController';
+import { toast } from 'sonner';
 
 interface TaskProductivity {
     id: number;
@@ -24,7 +25,11 @@ export default function Reject({ submission }: RejectProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(TaskProductivityController.reject(submission.id).url, { preserveScroll: true });
+        post(TaskProductivityController.reject(submission.id).url, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Reject task sent successfully.'),
+            onError: () => toast.error('Please fix the errors below.'),
+        });
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
