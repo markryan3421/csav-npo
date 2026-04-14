@@ -182,7 +182,6 @@ export default function Index({
     const { delete: destroy } = useForm();
     // Derived analytics
     const safeGoals  = goals?.data ?? [];
-    const safeSdgs   = sdgs   ?? [];
     const completionPct = totalGoals > 0 ? Math.round((compliantGoals / totalGoals) * 100) : 0;
 
     const byStatus = useMemo(() => ({
@@ -249,7 +248,7 @@ export default function Index({
 
     // Delete confirmation states
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const [itemToDelete, setItemToDelete] = useState<Goal | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDeleteClick = (goal: Goal) => {
@@ -263,13 +262,13 @@ export default function Index({
         setIsDeleting(true);
         destroy(GoalController.destroy({ goal: itemToDelete.slug }).url, {
             onSuccess: (page) => {
-                const successMessage = (page.props as any).flash?.success || 'Contribution version deleted successfully.';
+                const successMessage = (page.props as any).flash?.success || 'Goal deleted successfully.';
                 toast.success(successMessage);
                 setDeleteDialogOpen(false);
                 setItemToDelete(null);
             },
             onError: (errors) => {
-                const errorMessage = Object.values(errors).flat()[0] || 'Failed to delete contribution version.';
+                const errorMessage = Object.values(errors).flat()[0] || 'Failed to delete goal.';
                 toast.error(errorMessage);
             },
             onFinish: () => {
@@ -495,7 +494,7 @@ export default function Index({
                         </div>
                     </div>
 
-                    {/* ── SDG Switcher ── */}
+                    {/* ── SDG Switcher ──
                     {safeSdgs.length > 0 && (
                         <div className="section-in" style={{ animationDelay: '220ms' }}>
                             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -521,7 +520,7 @@ export default function Index({
                                 })}
                             </div>
                         </div>
-                    )}
+                    )} */}
 
                     {/* ── Goals table ── */}
                     <div className="section-in" style={{ animationDelay: '280ms' }}>
@@ -590,7 +589,7 @@ export default function Index({
 
                             <DeleteConfirmationModal
                                 open={deleteDialogOpen}
-                                onClose={() => {
+                                onOpenChange={() => {
                                     setDeleteDialogOpen(false);
                                     setItemToDelete(null);
                                 }}

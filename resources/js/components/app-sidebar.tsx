@@ -33,6 +33,7 @@ const ExpendituresItems: NavItem[] = [
         title: 'Dashboard',
         href: GoalController.index().url,
         icon: Landmark,
+        pattern: '/goals'
         // permission: 'access-goal',
     },
     {
@@ -40,23 +41,27 @@ const ExpendituresItems: NavItem[] = [
         href: '/permissions',
         icon: Lock,
         permission: 'access-permission',
+        pattern: '/permissions',
     },
     {
         title: 'Roles',
         href: '/roles',
         icon: Shield,
         permission: 'access-role',
+        pattern: '/roles',
     },
     {
         title: 'Users',
         href: '/users',
         icon: Users,
         permission: 'access-user',
+        pattern: '/users',
     },
     {
         title: 'Logs',
         href: '/logs',
         icon: Logs,
+        pattern: '/logs',
         // permission: 'access user',
     },
 ];
