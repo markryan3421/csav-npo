@@ -3,11 +3,12 @@
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\LogController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\TaskProductivityController;
+use App\Http\Controllers\NPOInsightController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SdgController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskProductivityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -76,6 +77,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('ai')->group(function () {
+    Route::get('/dashboard', [NPOInsightController::class, 'dashboard'])->name('ai.dashboard');
+    Route::get('/insights', [NPOInsightController::class, 'getInsights']);
+    Route::post('/generate-insights', [NPOInsightController::class, 'generateInsights']);
 });
 
 require __DIR__ . '/settings.php';

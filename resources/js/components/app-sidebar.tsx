@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield, Logs } from 'lucide-react';
+import { Airplay, CircleMinus, CircleUser, Flag, Landmark, Lock, UserCog, Clipboard, Banknote, History, Shield, Logs, ChartSpline } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -35,6 +35,13 @@ const ExpendituresItems: NavItem[] = [
         icon: Landmark,
         pattern: '/goals'
         // permission: 'access-goal',
+    },
+    {
+        title: 'Analytics',
+        href: '/ai/dashboard',
+        exactMatch: true,
+        icon: ChartSpline,
+        permission: 'access-analytics',
     },
     {
         title: 'Permissions',

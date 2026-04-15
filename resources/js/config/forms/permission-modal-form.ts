@@ -30,6 +30,7 @@ export const PermissionModalFormConfig = {
                 { label: 'Tasks', value: 'tasks', key: 'task' },
                 { label: 'Permissions', value: 'permissions', key: 'permission' },
                 { label: 'Productivities', value: 'productivities', key: 'productivity' },
+                { label: 'Analytics', value: 'analytics', key: 'analytics' },
             ],
         },
         {
