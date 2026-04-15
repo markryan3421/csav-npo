@@ -25,15 +25,9 @@ Route::post('/broadcasting/auth', function () {
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 403);
     }
-})->middleware(['web', 'auth']); // Add 'auth' middleware
+})->middleware(['web', 'auth', 'throttle:web-actions']); // Add 'auth' middleware
 
-// Route::middleware(['auth'])->group(function () {
-//     Route::get('/api/notifications', [NotificationController::class, 'index']);
-//     Route::put('/api/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-//     Route::put('/api/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-// });
-
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'throttle:web-actions'])->group(function () {
     Route::get('dashboard', [SdgController::class, 'index'])->name('dashboard');
 
     Route::resource('sdg', SdgController::class);
@@ -75,14 +69,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('tasks/{task:slug}/late-resubmit', [TaskProductivityController::class, 'storeLateResubmit'])->name('tasks.late-resubmit.store');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'throttle:web-actions'])->group(function () {
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
 });
 
-Route::middleware(['auth', 'verified'])->prefix('ai')->group(function () {
+Route::middleware(['auth', 'verified', 'throttle:web-actions'])->prefix('ai')->group(function () {
     Route::get('/dashboard', [NPOInsightController::class, 'dashboard'])->name('ai.dashboard');
     Route::get('/insights', [NPOInsightController::class, 'getInsights']);
     Route::post('/generate-insights', [NPOInsightController::class, 'generateInsights']);
+});
+
+Route::middleware(['auth', 'throttle:web-actions'])->get('/test-rate-limit', function () {
+    return response()->json([
+        'message' => 'This is request #' . request()->get('count', 1),
+        'time' => now()->toDateTimeString()
+    ]);
 });
 
 require __DIR__ . '/settings.php';

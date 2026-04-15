@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 // API Routes with Sanctum (for mobile/API tokens)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['throttle:api', 'auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
