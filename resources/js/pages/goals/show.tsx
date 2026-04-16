@@ -414,7 +414,7 @@ function TaskItem({ task, goalSlug }: {
                                                                     <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                                                                     <span className="truncate text-xs text-foreground">{file.file_name}</span>
                                                                 </div>
-                                                                <a href={`/storage/${file.file_path}`} target="_self"
+                                                                <a href={`/storage/${file.file_path}`} target="_blank"
                                                                     className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-md border border-primary/30 px-2 py-0.5 text-[10px] font-semibold text-primary transition-all hover:bg-primary hover:text-primary-foreground">
                                                                     <ExternalLink className="h-3 w-3" /> Open
                                                                 </a>

@@ -397,15 +397,6 @@ export default function CreateGoal({ sdg, authUser, staffUsers, allSdgs, usersBy
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Create Goal — ${sdg.name}`} />
-            <PortalMorph
-                eyebrow="CSAV · SDG Goals"
-                text="Create Goal"
-                textDisplayDuration={0.75}
-                popInDuration={0.55}
-                morphDuration={0.5}
-                initialBgColor="#004025"
-                onComplete={() => console.log('Portal done')}
-            />
             <style>{`
                 @keyframes formFadeUp {
                     from { opacity: 0; transform: translateY(20px); }
