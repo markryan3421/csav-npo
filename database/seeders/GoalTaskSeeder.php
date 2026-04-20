@@ -6,122 +6,126 @@ use App\Models\Goal;
 use App\Models\Sdg;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class GoalTaskSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-    public function run(): void
-    {
-        $sdgSeedData = [
-            [
-                'sdg_name' => 'No Poverty',
-                'goal' => [
-                    'title' => 'Expand barangay livelihood referrals for low-income households',
-                    'description' => 'Coordinate with local government and partner organizations to improve referral and onboarding of vulnerable households to livelihood and social protection programs.',
-                    'start_date' => now()->subWeeks(3),
-                    'end_date' => now()->addMonths(2),
-                    'status' => 'in-progress',
-                    'type' => 'short',
-                    'compliance_percentage' => 42.50,
-                ],
-                'task' => [
-                    'title' => 'Conduct household needs mapping and referral orientation',
-                    'description' => 'Profile 50 households, verify eligibility, and facilitate orientation sessions for livelihood grant referrals with signed attendance and intake records.',
-                    'status' => 'in-progress',
-                    'remarks' => 'Initial mapping complete in 2 sitios; validation scheduled with the social welfare office.',
-                    'deadline' => now()->addWeeks(3),
-                ],
-            ],
-            [
-                'sdg_name' => 'Zero Hunger',
-                'goal' => [
-                    'title' => 'Strengthen community feeding support in food-insecure schools',
-                    'description' => 'Improve nutrition outcomes by supporting school-based feeding implementation, pantry coordination, and food supply monitoring for high-need learners.',
-                    'start_date' => now()->subWeeks(2),
-                    'end_date' => now()->addMonths(3),
-                    'status' => 'in-progress',
-                    'type' => 'short',
-                    'compliance_percentage' => 35.00,
-                ],
-                'task' => [
-                    'title' => 'Validate beneficiary list and weekly meal delivery logs',
-                    'description' => 'Review the feeding beneficiary list with school focal persons and consolidate weekly meal distribution logs for nutrition program reporting.',
-                    'status' => 'pending',
-                    'remarks' => 'Waiting for two schools to submit complete attendance and meal records.',
-                    'deadline' => now()->addWeeks(4),
-                ],
-            ],
-            [
-                'sdg_name' => 'Good Health and Well-being',
-                'goal' => [
-                    'title' => 'Increase preventive health outreach participation',
-                    'description' => 'Support local health units in promoting preventive services through coordinated health caravans, risk screening, and follow-up referral tracking.',
-                    'start_date' => now()->subMonth(),
-                    'end_date' => now()->addMonths(4),
-                    'status' => 'in-progress',
-                    'type' => 'long',
-                    'compliance_percentage' => 51.75,
-                ],
-                'task' => [
-                    'title' => 'Prepare and deploy health caravan pre-registration drive',
-                    'description' => 'Manage pre-registration, produce outreach materials, and coordinate with barangay health workers for blood pressure and diabetes risk screening sessions.',
-                    'status' => 'in-progress',
-                    'remarks' => 'Registration desk process finalized; IEC materials for two barangays pending printing.',
-                    'deadline' => now()->addWeeks(2),
-                ],
-            ],
-        ];
+	/**
+	 * Run the database seeds.
+	 */
+	public function run(): void
+	{
+		// Assuming you have at least one user to act as project manager
+		$projectManager = User::first();
 
-        foreach ($sdgSeedData as $index => $seedData) {
-            $sdg = Sdg::where('name', $seedData['sdg_name'])->first();
+		if (!$projectManager) {
+			$this->command->error('No users found. Please seed users first.');
+			return;
+		}
 
-            if (! $sdg) {
-                continue;
-            }
+		// Get the first SDG available
+		$sdg = Sdg::first();
 
-            $projectManager = User::role('project-manager')
-                ->where('current_sdg_id', $sdg->id)
-                ->first();
+		if (!$sdg) {
+			$this->command->error('No SDG found. Please seed SDGs first.');
+			return;
+		}
 
-            $assignedStaff = User::role('staff')
-                ->where('current_sdg_id', $sdg->id)
-                ->first();
+		$this->command->info("Using SDG: {$sdg->name} (ID: {$sdg->id})");
 
-            if (! $projectManager || ! $assignedStaff) {
-                continue;
-            }
+		$goalsData = [
+			[
+				'title' => 'Curriculum Standardization and Quality Control',
+				'description' => 'To ensure the BSOA curriculum is industry-relevant, updated, and compliant with national education standards.',
+				'type' => 'long term',
+				'tasks' => [
+					'Curriculum Mapping: Aligning course outcomes with program objectives and industry needs.',
+					'Syllabus Review: Annual auditing of all BSOA syllabi to ensure modern office technologies are included.',
+					'Stakeholder Consultation: Gathering feedback from alumni and partner industries.',
+				],
+			],
+			[
+				'title' => 'Faculty Competency and Development',
+				'description' => 'To guarantee that BSOA instructors possess the necessary academic qualifications and industry certifications.',
+				'type' => 'long term',
+				'tasks' => [
+					'Faculty Training Needs Analysis (TNA): Identifying gaps in faculty knowledge (e.g., new ERP software or virtual assistant tools).',
+					'Credential Verification: Ensuring all faculty have the required Master\'s degrees or National Certificates (NC).',
+					'Performance Evaluation: Regular classroom observations and student feedback loops.',
+				],
+			],
+			[
+				'title' => 'Enhancement of Laboratory and Learning Resources',
+				'description' => 'To provide students with a physical or virtual environment that simulates a professional office setting.',
+				'type' => 'long term',
+				'tasks' => [
+					'Inventory Management: Maintaining a log of functioning computers, typewriters (if applicable), and office equipment.',
+					'Maintenance Scheduling: Routine updates for office software and hardware repairs.',
+					'Safety Audit: Ensuring the laboratory complies with health and safety standards.',
+				],
+			],
+			[
+				'title' => 'Internship and Placement Monitoring',
+				'description' => 'To manage the transition of students from the classroom to the professional workforce effectively.',
+				'type' => 'long term',
+				'tasks' => [
+					'MOA Management: Establishing and renewing Memorandums of Agreement with reputable host training agencies.',
+					'Internship Monitoring: Regular visits or check-ins with supervisors at the companies where BSOA students are interning.',
+					'Traceability of Graduates: Tracking employment rates of BSOA alumni.',
+				],
+			],
+			[
+				'title' => 'Document Control and Records Management',
+				'description' => 'To demonstrate "Good Housekeeping" by maintaining a systematic filing system for all departmental records.',
+				'type' => 'short term',
+				'tasks' => [
+					'Master List of Documents: Creating a registry for all internal forms and procedures.',
+					'Archive Management: Properly disposing of or archiving old student records according to data privacy laws.',
+				],
+			],
+		];
 
-            $goal = Goal::create([
-                'project_manager_id' => $projectManager->id,
-                'sdg_id' => $sdg->id,
-                'title' => $seedData['goal']['title'],
-                'slug' => Str::slug($seedData['goal']['title']) . '-' . ($index + 1),
-                'description' => $seedData['goal']['description'],
-                'start_date' => $seedData['goal']['start_date'],
-                'end_date' => $seedData['goal']['end_date'],
-                'status' => $seedData['goal']['status'],
-                'type' => $seedData['goal']['type'],
-                'compliance_percentage' => $seedData['goal']['compliance_percentage'],
-            ]);
+		$now = now();
 
-            $goal->goalWithSdgs()->syncWithoutDetaching([$sdg->id]);
-            $goal->assignedUsers()->syncWithoutDetaching([$assignedStaff->id]);
+		foreach ($goalsData as $goalData) {
+			// Create the goal (without sdg_id since it's in the pivot)
+			$goal = Goal::create([
+				'project_manager_id' => $projectManager->id,
+				'title' => $goalData['title'],
+				'slug' => Str::slug($goalData['title'] . '-' . Str::random(6)),
+				'description' => $goalData['description'],
+				'start_date' => $now->copy()->addDays(rand(1, 10)),
+				'end_date' => $now->copy()->addMonths(rand(6, 18)),
+				'status' => 'pending',
+				'type' => $goalData['type'],
+				'compliance_percentage' => 0,
+			]);
 
-            Task::create([
-                'goal_id' => $goal->id,
-                'sdg_id' => $sdg->id,
-                'title' => $seedData['task']['title'],
-                'slug' => Str::slug($seedData['task']['title']) . '-' . ($index + 1),
-                'description' => $seedData['task']['description'],
-                'status' => $seedData['task']['status'],
-                'remarks' => $seedData['task']['remarks'],
-                'deadline' => $seedData['task']['deadline'],
-            ]);
-        }
-    }
+			// Attach the SDG using the pivot table
+			$goal->sdgs()->attach($sdg->id);
+
+			$this->command->info("Created goal: {$goalData['title']}");
+
+			// Create tasks for the goal (tasks still have direct sdg_id foreign key)
+			foreach ($goalData['tasks'] as $taskTitle) {
+				Task::create([
+					'goal_id' => $goal->id,
+					'sdg_id' => $sdg->id,  // Tasks still have direct SDG foreign key
+					'title' => $taskTitle,
+					'slug' => Str::slug($taskTitle . '-' . Str::random(6)),
+					'description' => null,
+					'status' => 'pending',
+					'remarks' => null,
+					'deadline' => $now->copy()->addMonths(rand(1, 6)),
+				]);
+			}
+
+			$this->command->info("  - Created " . count($goalData['tasks']) . " tasks");
+		}
+
+		$this->command->newLine();
+		$this->command->info('✓ Goals and tasks seeded successfully!');
+		$this->command->info("✓ All goals attached to SDG ID: {$sdg->id}");
+	}
 }
